@@ -50,6 +50,7 @@ fn diagnostics() {
     }
 }
 
+#[cfg_attr(not(feature = "travis"), ignore)]
 #[test]
 fn connect_to_postgres_u() {
     let env = Environment::allocate().warning_as_error().unwrap();

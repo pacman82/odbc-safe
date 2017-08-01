@@ -4,5 +4,8 @@ version = "0.1.0"
 authors = ["Markus Klein <markus-klein@live.de>"]
 
 [dependencies]
-odbc-sys = { path = "../rust_projects/odbc-sys" }
-#odbc-sys = "0.3.0"
+odbc-sys = "0.5.0"
+
+[features]
+default = []
+travis = []
