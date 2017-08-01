@@ -1,0 +1,8 @@
+[package]
+name = "odbc-safe"
+version = "0.1.0"
+authors = ["Markus Klein <markus-klein@live.de>"]
+
+[dependencies]
+odbc-sys = { path = "../rust_projects/odbc-sys" }
+#odbc-sys = "0.3.0"
