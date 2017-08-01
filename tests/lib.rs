@@ -21,18 +21,31 @@ fn wrong_datasource() {
         .unwrap_err();
 }
 
-// #[test]
-// fn diagnostics() {
-//     use std::str;
+#[test]
+fn diagnostics() {
 
-//     let env = Environment::allocate().warning_as_error().unwrap();
-//     let env: Environment<Odbc3m8> = env.declare_version().warning_as_error().unwrap();
-//     let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
-//     if let Error(dbc) = dbc.connect(b"DoesntExist".as_ref(), b"".as_ref(), b"".as_ref()) {
-//         let mut message = [0; 512];
-//         match dbc.diagnostics(1, &mut message) {
-//             DiagReturn::Success(_) => println!("{}", str::from_utf8(&mut message).unwrap()),
-//             _ => panic!("No Diagnostics"),
-//         }
-//     }
-// }
+    let expected = if cfg!(target_os = "windows") {
+        "[Microsoft][ODBC Driver Manager] Data source name not found and no default driver \
+         specified"
+    } else {
+        "[unixODBC][Driver Manager]Data source name not found, and no default driver specified"
+    };
+
+    use std::str;
+
+    let env = Environment::allocate().warning_as_error().unwrap();
+    let env: Environment<Odbc3m8> = env.declare_version().warning_as_error().unwrap();
+
+    let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
+    let dbc = dbc.connect(b"DoesntExist".as_ref(), b"".as_ref(), b"".as_ref());
+    if let Error(d) = dbc {
+        let mut message = [0; 512];
+        match d.diagnostics(1, &mut message) {
+            DiagReturn::Success(rec) => {
+                let message = str::from_utf8(&mut message[..(rec.text_length as usize)]).unwrap();
+                assert_eq!(expected, message);
+            }
+            _ => panic!("Error retriving diagnostics Diagnostics"),
+        }
+    }
+}

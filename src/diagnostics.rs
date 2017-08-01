@@ -11,12 +11,12 @@ pub struct DiagResult {
     /// `rec_number`. The first two characters indicate the class; the next three indicate the
     /// subclass. For more information, see [SQLSTATE][1]s.
     /// [1]: https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/sqlstates
-    state: State,
+    pub state: State,
     /// Native error code specific to the data source.
-    native_error: SQLINTEGER,
+    pub native_error: SQLINTEGER,
     /// The total number of characters (excluding the terminating NULL) available to return in
     /// `message_text`.
-    text_length: SQLSMALLINT,
+    pub text_length: SQLSMALLINT,
 }
 
 /// Returned by `Diagnostics::diagnostics`
