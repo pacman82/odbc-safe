@@ -49,3 +49,16 @@ fn diagnostics() {
         }
     }
 }
+
+#[test]
+fn connect_to_postgres_u() {
+    let env = Environment::allocate().warning_as_error().unwrap();
+    let env: Environment<Odbc3m8> = env.declare_version().warning_as_error().unwrap();
+    let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
+    let dbc = dbc.connect(b"PostgreSQL_U".as_ref(),
+                 b"test_user".as_ref(),
+                 b"".as_ref())
+        .map_error(|_| ())
+        .warning_as_error()
+        .unwrap();
+}
