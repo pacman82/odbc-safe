@@ -56,8 +56,8 @@ fn connect_to_postgres_u() {
     let env = Environment::allocate().warning_as_error().unwrap();
     let env: Environment<Odbc3> = env.declare_version().warning_as_error().unwrap();
     let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
-    let dbc = dbc.connect(b"PostgreSQL_U".as_ref(),
-                 b"test_user".as_ref(),
+    let dbc = dbc.connect(b"travis_ci_test".as_ref(),
+                 b"postgres".as_ref(),
                  b"".as_ref())
         .map_error(|_| ())
         .warning_as_error()
