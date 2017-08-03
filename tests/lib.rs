@@ -63,3 +63,17 @@ fn connect_to_postgres_u() {
         .warning_as_error()
         .unwrap();
 }
+
+/// Checks for a diagnstic record. Should one be present this function pancis printing the contents
+/// of said record.
+fn panic_with_diagnostic(diag: &Diagnostics){
+    use std::str;
+    let mut buffer = [0;512];
+    match diag.diagnostics(0, &mut buffer){
+        DiagReturn::Success(dr) | DiagReturn::Info(dr) =>{
+            panic!("{}", str::from_utf8(&buffer[0..(dr.text_length as usize)]).unwrap())
+        },
+        DiagReturn::Error => panic!("Error during fetching diagnostic record"),
+        DiagReturn::NoData => (),
+    }
+}
