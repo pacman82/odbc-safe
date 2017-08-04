@@ -1,5 +1,6 @@
 use super::*;
 use std::ptr::null_mut;
+use std::thread::panicking;
 
 /// An `Environment` is a global context, in which to access data.
 ///
@@ -20,7 +21,11 @@ impl Drop for HEnv {
         unsafe {
             match SQLFreeHandle(SQL_HANDLE_ENV, self.handle as SQLHANDLE) {
                 SQL_SUCCESS => (),
-                other => panic!("Unexepected return value of SQLFreeHandle: {:?}", other),
+                other => {
+                    if !panicking() {
+                        panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
+                    }
+                }
             }
         }
     }

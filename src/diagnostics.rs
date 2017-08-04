@@ -61,15 +61,16 @@ impl<H: Handle> Diagnostics for H {
             let mut text_length = 0;
             let mut state = [0; 6];
             let mut native_error = 0;
-            let ret = SQLGetDiagRec(H::handle_type(),
-                                    self.handle(),
-                                    rec_number,
-                                    state.as_mut_ptr(),
-                                    &mut native_error,
-                                    message_text.as_mut_ptr(),
-                                    min(message_text.len() as SQLSMALLINT,
-                                        SQLSMALLINT::max_value()),
-                                    &mut text_length);
+            let ret = SQLGetDiagRec(
+                H::handle_type(),
+                self.handle(),
+                rec_number,
+                state.as_mut_ptr(),
+                &mut native_error,
+                message_text.as_mut_ptr(),
+                min(message_text.len() as SQLSMALLINT, SQLSMALLINT::max_value()),
+                &mut text_length,
+            );
             let result = DiagResult {
                 text_length: text_length,
                 state: state,

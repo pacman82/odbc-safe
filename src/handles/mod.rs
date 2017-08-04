@@ -20,7 +20,7 @@ use odbc_sys::*;
 mod henv;
 mod hdbc;
 
-pub unsafe trait Handle{
+pub unsafe trait Handle {
     unsafe fn handle(&self) -> SQLHANDLE;
     fn handle_type() -> HandleType;
 }

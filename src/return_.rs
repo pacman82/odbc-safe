@@ -17,7 +17,8 @@ impl<T, E> Return<T, E> {
     /// Maps a `Return<T,E>` to `Result<U,E>` by applying a function to a contained `Success` or
     /// `Info` value, leaving an `Error` value untouched.
     pub fn map<F, U>(self, f: F) -> Return<U, E>
-        where F: FnOnce(T) -> U
+    where
+        F: FnOnce(T) -> U,
     {
         match self {
             Success(v) => Success(f(v)),
@@ -29,7 +30,8 @@ impl<T, E> Return<T, E> {
     /// Maps a `Return<T,E>` to `Result<T,U>` by applying a function to a contained `Error value,
     /// leaving a `Success` or an `Info` value untouched.
     pub fn map_error<F, U>(self, f: F) -> Return<T, U>
-        where F: FnOnce(E) -> U
+    where
+        F: FnOnce(E) -> U,
     {
         match self {
             Success(v) => Success(v),

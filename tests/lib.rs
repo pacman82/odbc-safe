@@ -52,27 +52,31 @@ fn diagnostics() {
 
 #[cfg_attr(not(feature = "travis"), ignore)]
 #[test]
-fn connect_to_postgres_u() {
+fn connect_to_postgres() {
     let env = Environment::allocate().warning_as_error().unwrap();
     let env: Environment<Odbc3> = env.declare_version().warning_as_error().unwrap();
     let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
-    let dbc = dbc.connect(b"travis_ci_test".as_ref(),
-                 b"postgres".as_ref(),
-                 b"".as_ref())
-        .map_error(|_| ())
-        .warning_as_error()
-        .unwrap();
+    let dbc = dbc.connect(b"PostgreSQL".as_ref(), b"postgres".as_ref(), b"".as_ref());
+    match dbc {
+        Success(c) => (),
+        Info(c) => panic_with_diagnostic(&c),
+        Error(c) => panic_with_diagnostic(&c),
+    }
 }
 
 /// Checks for a diagnstic record. Should one be present this function pancis printing the contents
 /// of said record.
-fn panic_with_diagnostic(diag: &Diagnostics){
+fn panic_with_diagnostic(diag: &Diagnostics) {
     use std::str;
-    let mut buffer = [0;512];
-    match diag.diagnostics(1, &mut buffer){
-        DiagReturn::Success(dr) | DiagReturn::Info(dr) =>{
-            panic!("{}", str::from_utf8(&buffer[..(dr.text_length as usize)]).unwrap())
-        },
+    let mut buffer = [0; 512];
+    match diag.diagnostics(1, &mut buffer) {
+        DiagReturn::Success(dr) |
+        DiagReturn::Info(dr) => {
+            panic!(
+                "{}",
+                str::from_utf8(&buffer[0..(dr.text_length as usize)]).unwrap()
+            )
+        }
         DiagReturn::Error => panic!("Error during fetching diagnostic record"),
         DiagReturn::NoData => (),
     }

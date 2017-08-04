@@ -1,6 +1,7 @@
 use super::*;
 use std::ptr::null_mut;
 use std::marker::PhantomData;
+use std::thread::panicking;
 
 #[derive(Debug)]
 pub struct HDbc<'env> {
@@ -13,9 +14,13 @@ pub struct HDbc<'env> {
 impl<'env> Drop for HDbc<'env> {
     fn drop(&mut self) {
         unsafe {
-            match SQLFreeHandle(SQL_HANDLE_DBC, self.handle as SQLHANDLE) {
+            match SQLFreeHandle(SQL_HANDLE_ENV, self.handle as SQLHANDLE) {
                 SQL_SUCCESS => (),
-                other => panic!("Unexepected return value of SQLFreeHandle: {:?}", other),
+                other => {
+                    if !panicking() {
+                        panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
+                    }
+                }
             }
         }
     }
@@ -44,19 +49,21 @@ impl<'env> HDbc<'env> {
     }
 
     pub fn connect<DSN, U, P>(&mut self, data_source_name: &DSN, user: &U, pwd: &P) -> Return<()>
-        where DSN: SqlStr + ?Sized,
-              U: SqlStr + ?Sized,
-              P: SqlStr + ?Sized
+    where
+        DSN: SqlStr + ?Sized,
+        U: SqlStr + ?Sized,
+        P: SqlStr + ?Sized,
     {
         unsafe {
-            SQLConnect(self.handle,
-                       data_source_name.as_ansi_ptr(),
-                       data_source_name.len(),
-                       user.as_ansi_ptr(),
-                       user.len(),
-                       pwd.as_ansi_ptr(),
-                       pwd.len())
-                .into()
+            SQLConnect(
+                self.handle,
+                data_source_name.as_ansi_ptr(),
+                data_source_name.len(),
+                user.as_ansi_ptr(),
+                user.len(),
+                pwd.as_ansi_ptr(),
+                pwd.len(),
+            ).into()
         }
     }
 }

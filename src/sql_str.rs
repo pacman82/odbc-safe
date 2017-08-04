@@ -26,9 +26,11 @@ unsafe impl SqlStr for [u8] {
 
     fn len(&self) -> SQLSMALLINT {
         if self.len() > SQLSMALLINT::max_value() as usize {
-            panic!("Buffer length of {} is greater than SQLSMALLINT::MAX: {}",
-                   self.len(),
-                   SQLSMALLINT::max_value());
+            panic!(
+                "Buffer length of {} is greater than SQLSMALLINT::MAX: {}",
+                self.len(),
+                SQLSMALLINT::max_value()
+            );
         }
         self.len() as SQLSMALLINT
     }

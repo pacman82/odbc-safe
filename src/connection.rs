@@ -61,7 +61,8 @@ impl<'env> Connection<'env, Allocated> {
     /// allocating a `Connection` and before connecting to the driver or data source, most methods
     /// can not be called by the application. An attempt to do so will result in a compiler error.
     pub fn with_parent<V>(parent: &'env Environment<V>) -> Return<Self>
-        where V: Version
+    where
+        V: Version,
     {
         HDbc::allocate(parent.henv()).map(|handle| {
             Connection {
@@ -86,14 +87,16 @@ impl<'env> Connection<'env, Allocated> {
     ///                        the program, or on another computer somewhere on a network.
     /// * `user` - User identifier.
     /// * `pwd` - Authenticatien string (typically the password).
-    pub fn connect<DSN, U, P>(mut self,
-                              data_source_name: &DSN,
-                              user: &U,
-                              pwd: &P)
-                              -> Return<Connection<'env, Connected>, Connection<'env, Allocated>>
-        where DSN: SqlStr + ?Sized,
-              U: SqlStr + ?Sized,
-              P: SqlStr + ?Sized
+    pub fn connect<DSN, U, P>(
+        mut self,
+        data_source_name: &DSN,
+        user: &U,
+        pwd: &P,
+    ) -> Return<Connection<'env, Connected>, Connection<'env, Allocated>>
+    where
+        DSN: SqlStr + ?Sized,
+        U: SqlStr + ?Sized,
+        P: SqlStr + ?Sized,
     {
         match self.handle.connect(data_source_name, user, pwd) {
             Success(()) => Success(self.transit()),
@@ -103,8 +106,8 @@ impl<'env> Connection<'env, Allocated> {
     }
 }
 
-impl<'env, S> Diagnostics for Connection<'env, S>{
-    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn{
+impl<'env, S> Diagnostics for Connection<'env, S> {
+    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn {
         self.handle.diagnostics(rec_number, message_text)
     }
 }

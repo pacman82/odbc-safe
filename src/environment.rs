@@ -67,8 +67,8 @@ impl<V> Environment<V> {
     }
 }
 
-impl<V> Diagnostics for Environment<V>{
-    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn{
+impl<V> Diagnostics for Environment<V> {
+    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn {
         self.handle.diagnostics(rec_number, message_text)
     }
 }
