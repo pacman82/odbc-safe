@@ -14,7 +14,7 @@ pub struct HDbc<'env> {
 impl<'env> Drop for HDbc<'env> {
     fn drop(&mut self) {
         unsafe {
-            match SQLFreeHandle(SQL_HANDLE_ENV, self.handle as SQLHANDLE) {
+            match SQLFreeHandle(SQL_HANDLE_DBC, self.handle as SQLHANDLE) {
                 SQL_SUCCESS => (),
                 other => {
                     if !panicking() {

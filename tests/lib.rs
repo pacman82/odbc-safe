@@ -4,6 +4,11 @@ extern crate odbc_safe;
 use odbc_safe::*;
 
 #[test]
+fn allocate_environment() {
+    Environment::allocate().warning_as_error().unwrap();
+}
+
+#[test]
 fn query_result() {
     let env = Environment::allocate().warning_as_error().unwrap();
     let env: Environment<Odbc3> = env.declare_version().warning_as_error().unwrap();
@@ -15,7 +20,7 @@ fn wrong_datasource() {
     let env = Environment::allocate().warning_as_error().unwrap();
     let env: Environment<Odbc3> = env.declare_version().warning_as_error().unwrap();
     let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
-    let dbc = dbc.connect(b"DoesntExist".as_ref(), b"".as_ref(), b"".as_ref())
+    dbc.connect(b"DoesntExist".as_ref(), b"".as_ref(), b"".as_ref())
         .map_error(|_| ())
         .warning_as_error()
         .unwrap_err();
@@ -58,7 +63,7 @@ fn connect_to_postgres() {
     let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
     let dbc = dbc.connect(b"PostgreSQL".as_ref(), b"postgres".as_ref(), b"".as_ref());
     match dbc {
-        Success(c) => (),
+        Success(_) => (),
         Info(c) => panic_with_diagnostic(&c),
         Error(c) => panic_with_diagnostic(&c),
     }
@@ -70,8 +75,7 @@ fn panic_with_diagnostic(diag: &Diagnostics) {
     use std::str;
     let mut buffer = [0; 512];
     match diag.diagnostics(1, &mut buffer) {
-        DiagReturn::Success(dr) |
-        DiagReturn::Info(dr) => {
+        DiagReturn::Success(dr) | DiagReturn::Info(dr) => {
             panic!(
                 "{}",
                 str::from_utf8(&buffer[0..(dr.text_length as usize)]).unwrap()
