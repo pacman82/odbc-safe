@@ -69,9 +69,9 @@ fn connect_to_postgres_u() {
 fn panic_with_diagnostic(diag: &Diagnostics){
     use std::str;
     let mut buffer = [0;512];
-    match diag.diagnostics(0, &mut buffer){
+    match diag.diagnostics(1, &mut buffer){
         DiagReturn::Success(dr) | DiagReturn::Info(dr) =>{
-            panic!("{}", str::from_utf8(&buffer[0..(dr.text_length as usize)]).unwrap())
+            panic!("{}", str::from_utf8(&buffer[..(dr.text_length as usize)]).unwrap())
         },
         DiagReturn::Error => panic!("Error during fetching diagnostic record"),
         DiagReturn::NoData => (),
