@@ -8,7 +8,7 @@
 //!   handle can be referenced by several child handles.
 //! * Any transition in the ODBC State machine is modelled in the type system. This prevents
 //!   Function Sequence errors. See [ODBC State Transition Tables][1]
-//! [1]: https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/appendix-b-odbc-state-transition-tables
+//! [1]: https://docs.microsoft.com/sql/odbc/reference/appendixes/appendix-b-odbc-state-transition-tables
 #![warn(missing_docs, missing_debug_implementations, missing_copy_implementations, trivial_casts,
         trivial_numeric_casts, unused_import_braces, unused_qualifications
 )]
