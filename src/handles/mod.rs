@@ -14,7 +14,7 @@
 
 pub use self::henv::HEnv;
 pub use self::hdbc::HDbc;
-use super::{Return, SqlStr};
+use super::*;
 use odbc_sys::*;
 
 mod henv;

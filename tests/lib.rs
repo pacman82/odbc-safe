@@ -61,12 +61,10 @@ fn connect_to_postgres() {
     let env = Environment::allocate().warning_as_error().unwrap();
     let env: Environment<Odbc3> = env.declare_version().warning_as_error().unwrap();
     let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
-    let dbc = dbc.connect(b"PostgreSQL".as_ref(), b"postgres".as_ref(), b"".as_ref());
-    match dbc {
-        Success(_) => (),
-        Info(c) => panic_with_diagnostic(&c),
-        Error(c) => panic_with_diagnostic(&c),
-    }
+    let dbc = dbc.connect(b"PostgreSQL".as_ref(), b"postgres".as_ref(), b"".as_ref())
+        .warning_as_error()
+        .unwrap();
+    dbc.disconnect().warning_as_error().unwrap()
 }
 
 /// Checks for a diagnstic record. Should one be present this function pancis printing the contents

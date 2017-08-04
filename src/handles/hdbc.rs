@@ -18,7 +18,7 @@ impl<'env> Drop for HDbc<'env> {
                 SQL_SUCCESS => (),
                 other => {
                     if !panicking() {
-                        panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
+                        panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
                     }
                 }
             }
@@ -65,5 +65,9 @@ impl<'env> HDbc<'env> {
                 pwd.len(),
             ).into()
         }
+    }
+
+    pub fn disconnect(&mut self) -> Return<()> {
+        unsafe { SQLDisconnect(self.handle).into() }
     }
 }

@@ -104,6 +104,26 @@ impl<'env> Connection<'env, Allocated> {
             Error(()) => Error(self.transit()),
         }
     }
+
+    /// When an application has finished using a data source, it calls `disconnect`. `disconnect`
+    /// disconnects the driver from the data source.
+    ///
+    /// The application also can reuse the connection, either to connect to a different data source
+    /// or reconnect to the same data source. The decision to remain connected, as opposed to
+    /// disconnecting and reconnecting later, requires that the application writer consider the
+    /// relative costs of each option; both connecting to a data source and remaining connected can
+    /// be relatively costly depending on the connection medium. In making a correct tradeoff, the
+    /// application must also make assumptions about the likelihood and timing of further
+    /// operations on the same data source.
+    pub fn disconnect(
+        mut self,
+    ) -> Return<Connection<'env, Allocated>, Connection<'env, Connected>> {
+        match self.handle.disconnect() {
+            Success(()) => Success(self.transit()),
+            Info(()) => Info(self.transit()),
+            Error(()) => Error(self.transit()),
+        }
+    }
 }
 
 impl<'env, S> Diagnostics for Connection<'env, S> {
