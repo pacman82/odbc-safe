@@ -17,12 +17,9 @@ addons:
 services:
  - postgresql
 before_script:
- - export PATH=$PATH:$HOME/.cargo/bin
- - which rustfmt || cargo install rustfmt
  - psql -c 'create database travis_ci_test;' -U postgres
  - export ODBCINI=${PWD}/travis/odbc.ini
 script:
-  - cargo fmt -- --write-mode=diff
   - cargo build --release
   - cargo test --verbose --release --features travis
   - cargo doc --no-deps
