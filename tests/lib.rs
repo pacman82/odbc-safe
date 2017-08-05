@@ -76,7 +76,10 @@ fn query_result() {
     let dbc = Connection::with_parent(&env).unwrap();
     let dbc = dbc.connect(b"PostgreSQL" as &[u8], b"postgres" as &[u8], b"" as &[u8])
         .unwrap();
-    Statement::with_parent(&dbc).unwrap();
+    {
+        Statement::with_parent(&dbc).unwrap();
+    }
+    dbc.disconnect().unwrap();
 }
 
 /// Checks for a diagnstic record. Should one be present this function panics printing the contents
