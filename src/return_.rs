@@ -39,14 +39,14 @@ impl<T, E> Return<T, E> {
             Error(e) => Error(f(e)),
         }
     }
-}
 
-impl<T> Return<T, ()> {
-    /// Converts `Return` into `std::result::Result`. Maps `Info` to `Err`.
-    pub fn warning_as_error(self) -> Result<T, ()> {
+    /// Unwraps the result, yielding the content of `Success` or `Info`
+    pub fn unwrap(self) -> T {
         match self {
-            Success(val) => Ok(val),
-            Info(_) | Error(()) => Err(()),
+            Success(v) | Info(v) => v,
+            Error(_) => {
+                panic!("Unwrapping `Return` failed. Use `Diagnostics` to obtain more information.")
+            }
         }
     }
 }

@@ -19,6 +19,7 @@ unsafe impl SqlStr for CStr {
     }
 }
 
+/// For passing a buffer without terminating NULL
 unsafe impl SqlStr for [u8] {
     fn as_ansi_ptr(&self) -> *const SQLCHAR {
         self.as_ptr()

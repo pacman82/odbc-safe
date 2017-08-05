@@ -17,12 +17,13 @@ extern crate odbc_sys;
 
 pub use return_::{Return, Success, Info, Error};
 pub use environment::Environment;
-pub use connection::Connection;
+pub use connection::{Connection, Connected, Unconnected};
+pub use statement::Statement;
 pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use sql_str::SqlStr;
 pub use diagnostics::{Diagnostics, DiagResult, DiagReturn};
 use version::Version;
-use handles::{Handle, HEnv, HDbc};
+use handles::{Handle, HEnv, HDbc, HStmt};
 
 mod version;
 mod return_;
@@ -31,3 +32,4 @@ mod handles;
 mod diagnostics;
 mod environment;
 mod connection;
+mod statement;

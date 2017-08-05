@@ -39,6 +39,11 @@ pub enum Unconnected {}
 pub enum Connected {}
 
 impl<'env, Any> Connection<'env, Any> {
+    /// Provides access to the raw ODBC Connection Handle
+    pub unsafe fn as_raw(&self) -> SQLHDBC {
+        self.handle.as_raw()
+    }
+
     /// Express state transiton
     fn transit<Other>(self) -> Connection<'env, Other> {
         Connection {
@@ -64,7 +69,7 @@ impl<'env> Connection<'env, Unconnected> {
     where
         V: Version,
     {
-        HDbc::allocate(parent.henv()).map(|handle| {
+        HDbc::allocate(parent.as_henv()).map(|handle| {
             Connection {
                 state: PhantomData,
                 handle: handle,
@@ -106,7 +111,12 @@ impl<'env> Connection<'env, Unconnected> {
     }
 }
 
-impl<'env, Connected> Connection<'env, Connected> {
+impl<'env> Connection<'env, Connected> {
+    /// Used by `Statement`s constructor
+    pub(crate) fn as_hdbc(&self) -> &HDbc {
+        &self.handle
+    }
+
     /// When an application has finished using a data source, it calls `disconnect`. `disconnect`
     /// disconnects the driver from the data source.
     ///

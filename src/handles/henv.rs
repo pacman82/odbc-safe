@@ -57,7 +57,7 @@ impl HEnv {
     }
 
     /// Provides access to the raw ODBC environment handle.
-    pub unsafe fn handle(&self) -> SQLHENV {
+    pub unsafe fn as_raw(&self) -> SQLHENV {
         self.handle
     }
 }

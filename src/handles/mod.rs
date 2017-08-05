@@ -14,11 +14,13 @@
 
 pub use self::henv::HEnv;
 pub use self::hdbc::HDbc;
+pub use self::hstmt::HStmt;
 use super::*;
 use odbc_sys::*;
 
 mod henv;
 mod hdbc;
+mod hstmt;
 
 pub unsafe trait Handle {
     unsafe fn handle(&self) -> SQLHANDLE;

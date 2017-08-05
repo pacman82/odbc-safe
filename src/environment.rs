@@ -18,9 +18,31 @@ pub struct Environment<V> {
     handle: HEnv,
 }
 
+impl<V> Environment<V> {
+    /// Provides access to the raw ODBC environment handle.
+    pub unsafe fn as_raw(&self) -> SQLHENV {
+        self.handle.as_raw()
+    }
+
+    /// Express state transiton
+    fn transit<Other>(self) -> Environment<Other> {
+        Environment {
+            version: PhantomData,
+            handle: self.handle,
+        }
+    }
+}
+
+impl<V: Version> Environment<V> {
+    /// Used by `Connection`s constructor
+    pub(crate) fn as_henv(&self) -> &HEnv {
+        &self.handle
+    }
+}
+
 impl Environment<NoVersion> {
     /// Allocates a new `Environment`
-    pub fn allocate() -> Return<Self> {
+    pub fn new() -> Return<Self> {
         HEnv::allocate().map(|handle| {
             Environment {
                 version: PhantomData,
@@ -35,9 +57,13 @@ impl Environment<NoVersion> {
     /// It is valid to specify ODBC 3.x even then connecting to an ODBC 2.x driver. Applications
     /// must however avoid calling 3.x functionality on 2.x drivers. Since drivers are connected at
     /// runtime, these kind of errors can not be catched by the type system.
-    pub fn declare_version<V: Version>(mut self) -> Return<Environment<V>> {
+    pub fn declare_version<V: Version>(mut self) -> Return<Environment<V>, Environment<NoVersion>> {
         let result = self.handle.declare_version(V::constant());
-        result.map(move |()| Environment{version: PhantomData, handle: self.handle})
+        match result {
+            Success(()) => Success(self.transit()),
+            Info(()) => Success(self.transit()),
+            Error(()) => Success(self.transit()),
+        }
     }
 
     /// Before an application allocates a connection which specification it follows. Currently
@@ -48,22 +74,8 @@ impl Environment<NoVersion> {
     /// runtime, these kind of errors can not be catched by the type system.
     ///
     /// This method is a shorthand for `declare_version::<Odbc3m8>`.
-    pub fn declare_version_3_8(self) -> Return<Environment<Odbc3m8>> {
+    pub fn declare_version_3_8(self) -> Return<Environment<Odbc3m8>, Environment<NoVersion>> {
         self.declare_version::<Odbc3m8>()
-    }
-}
-
-impl<V: Version> Environment<V> {
-    /// Used by `Connection`s constructor
-    pub(crate) fn henv(&self) -> &HEnv {
-        &self.handle
-    }
-}
-
-impl<V> Environment<V> {
-    /// Provides access to the raw ODBC environment handle.
-    pub unsafe fn handle(&self) -> SQLHENV {
-        self.handle.handle()
     }
 }
 

@@ -37,13 +37,17 @@ unsafe impl<'env> Handle for HDbc<'env> {
 }
 
 impl<'env> HDbc<'env> {
+    pub unsafe fn as_raw(&self) -> SQLHDBC {
+        self.handle
+    }
+
     /// Allocates a new Connection Handle
     pub fn allocate(parent: &HEnv) -> Return<Self> {
 
         let mut out = null_mut();
         unsafe {
-            let result: Return<()> =
-                SQLAllocHandle(SQL_HANDLE_DBC, parent.handle() as SQLHANDLE, &mut out).into();
+            let result: Return<()> = SQLAllocHandle(Self::handle_type(), parent.handle(), &mut out)
+                .into();
             result.map(|()| HDbc { parent: PhantomData, handle: out as SQLHDBC })
         }
     }

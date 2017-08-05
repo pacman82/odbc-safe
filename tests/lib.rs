@@ -5,25 +5,24 @@ use odbc_safe::*;
 
 #[test]
 fn allocate_environment() {
-    Environment::allocate().warning_as_error().unwrap();
+    Environment::new().unwrap();
 }
 
 #[test]
-fn query_result() {
-    let env = Environment::allocate().warning_as_error().unwrap();
-    let env: Environment<Odbc3> = env.declare_version().warning_as_error().unwrap();
-    Connection::with_parent(&env).warning_as_error().unwrap();
+fn allocate_connection() {
+    let env = Environment::new().unwrap();
+    let env: Environment<Odbc3> = env.declare_version().unwrap();
+    Connection::with_parent(&env).unwrap();
 }
 
 #[test]
+#[should_panic]
 fn wrong_datasource() {
-    let env = Environment::allocate().warning_as_error().unwrap();
-    let env: Environment<Odbc3> = env.declare_version().warning_as_error().unwrap();
-    let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
+    let env = Environment::new().unwrap();
+    let env: Environment<Odbc3> = env.declare_version().unwrap();
+    let dbc = Connection::with_parent(&env).unwrap();
     dbc.connect(b"DoesntExist" as &[u8], b"" as &[u8], b"" as &[u8])
-        .map_error(|_| ())
-        .warning_as_error()
-        .unwrap_err();
+        .unwrap();
 }
 
 #[test]
@@ -38,10 +37,10 @@ fn diagnostics() {
 
     use std::str;
 
-    let env = Environment::allocate().warning_as_error().unwrap();
-    let env: Environment<Odbc3> = env.declare_version().warning_as_error().unwrap();
+    let env = Environment::new().unwrap();
+    let env: Environment<Odbc3> = env.declare_version().unwrap();
 
-    let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
+    let dbc = Connection::with_parent(&env).unwrap();
     let dbc = dbc.connect(b"DoesntExist" as &[u8], b"" as &[u8], b"" as &[u8]);
     if let Error(d) = dbc {
         let mut message = [0; 512];
@@ -50,7 +49,7 @@ fn diagnostics() {
                 let message = str::from_utf8(&mut message[..(rec.text_length as usize)]).unwrap();
                 assert_eq!(expected, message);
             }
-            _ => panic!("Error retriving diagnostics Diagnostics"),
+            _ => panic!("Error retriving diagnostics"),
         }
     }
 }
@@ -58,15 +57,26 @@ fn diagnostics() {
 #[cfg_attr(not(feature = "travis"), ignore)]
 #[test]
 fn connect_to_postgres() {
-    let env = Environment::allocate().warning_as_error().unwrap();
-    let env: Environment<Odbc3> = env.declare_version().warning_as_error().unwrap();
-    let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
+    let env = Environment::new().unwrap();
+    let env: Environment<Odbc3> = env.declare_version().unwrap();
+    let dbc = Connection::with_parent(&env).unwrap();
     let dbc = dbc.connect(b"PostgreSQL" as &[u8], b"postgres" as &[u8], b"" as &[u8]);
     match dbc {
         Success(c) => panic_with_diagnostic(&c.disconnect()),
         Info(c) => panic_with_diagnostic(&c),
         Error(c) => panic_with_diagnostic(&c),
     };
+}
+
+#[cfg_attr(not(feature = "travis"), ignore)]
+#[test]
+fn query_result() {
+    let env = Environment::new().unwrap();
+    let env: Environment<Odbc3> = env.declare_version().unwrap();
+    let dbc = Connection::with_parent(&env).unwrap();
+    let dbc = dbc.connect(b"PostgreSQL" as &[u8], b"postgres" as &[u8], b"" as &[u8])
+        .unwrap();
+    Statement::with_parent(&dbc).unwrap();
 }
 
 /// Checks for a diagnstic record. Should one be present this function panics printing the contents
