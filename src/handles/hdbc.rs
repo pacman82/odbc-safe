@@ -58,11 +58,11 @@ impl<'env> HDbc<'env> {
             SQLConnect(
                 self.handle,
                 data_source_name.as_ansi_ptr(),
-                data_source_name.len(),
+                data_source_name.text_length(),
                 user.as_ansi_ptr(),
-                user.len(),
+                user.text_length(),
                 pwd.as_ansi_ptr(),
-                pwd.len(),
+                pwd.text_length(),
             ).into()
         }
     }
