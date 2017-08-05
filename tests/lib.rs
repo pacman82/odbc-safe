@@ -20,7 +20,7 @@ fn wrong_datasource() {
     let env = Environment::allocate().warning_as_error().unwrap();
     let env: Environment<Odbc3> = env.declare_version().warning_as_error().unwrap();
     let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
-    dbc.connect(b"DoesntExist", b"", b"")
+    dbc.connect(b"DoesntExist" as &[u8], b"" as &[u8], b"" as &[u8])
         .map_error(|_| ())
         .warning_as_error()
         .unwrap_err();
@@ -42,7 +42,7 @@ fn diagnostics() {
     let env: Environment<Odbc3> = env.declare_version().warning_as_error().unwrap();
 
     let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
-    let dbc = dbc.connect(b"DoesntExist", b"", b"");
+    let dbc = dbc.connect(b"DoesntExist" as &[u8], b"" as &[u8], b"" as &[u8]);
     if let Error(d) = dbc {
         let mut message = [0; 512];
         match d.diagnostics(1, &mut message) {
@@ -61,7 +61,7 @@ fn connect_to_postgres() {
     let env = Environment::allocate().warning_as_error().unwrap();
     let env: Environment<Odbc3> = env.declare_version().warning_as_error().unwrap();
     let dbc = Connection::with_parent(&env).warning_as_error().unwrap();
-    let dbc = dbc.connect(b"PostgreSQL", b"postgres", b"");
+    let dbc = dbc.connect(b"PostgreSQL" as &[u8], b"postgres" as &[u8], b"" as &[u8]);
     match dbc {
         Success(c) => panic_with_diagnostic(&c.disconnect()),
         Info(c) => panic_with_diagnostic(&c),

@@ -19,19 +19,6 @@ unsafe impl SqlStr for CStr {
     }
 }
 
-unsafe impl<T> SqlStr for T
-where
-    T: AsRef<[u8]>,
-{
-    fn as_ansi_ptr(&self) -> *const SQLCHAR {
-        self.as_ref().as_ansi_ptr()
-    }
-
-    fn text_length(&self) -> SQLSMALLINT {
-        self.as_ref().text_length()
-    }
-}
-
 unsafe impl SqlStr for [u8] {
     fn as_ansi_ptr(&self) -> *const SQLCHAR {
         self.as_ptr()
