@@ -37,13 +37,17 @@ unsafe impl<'env> Handle for HStmt<'env> {
 }
 
 impl<'env> HStmt<'env> {
+    pub unsafe fn as_raw(&self) -> SQLHSTMT {
+        self.handle
+    }
+
     /// Allocates a new Statement Handle
     pub fn allocate(parent: &HDbc) -> Return<Self> {
 
         let mut out = null_mut();
         unsafe {
-            let result: Return<()> = SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out)
-                .into();
+            let result: Return<()> =
+                SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out).into();
             result.map(|()| HStmt { parent: PhantomData, handle: out as SQLHSTMT })
         }
     }
