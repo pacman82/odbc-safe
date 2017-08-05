@@ -24,15 +24,15 @@ use std::marker::PhantomData;
 /// retrieving diagnostics, and performing transactions. They are also used when setting and
 /// getting connection attributes and when getting the native format of an SQL statement.
 #[derive(Debug)]
-pub struct Connection<'env, S = Allocated> {
+pub struct Connection<'env, S = Unconnected> {
     state: PhantomData<S>,
     handle: HDbc<'env>,
 }
 
-/// Indicates that a `Connection` is allocated, but not yet connected to a Data Source.
+/// Indicates that a `Connection` is allocated, but not connected to a Data Source.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
-pub enum Allocated {}
+pub enum Unconnected {}
 /// Indicates that a `Connection` is connected to a Data Source.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
@@ -48,7 +48,7 @@ impl<'env, Any> Connection<'env, Any> {
     }
 }
 
-impl<'env> Connection<'env, Allocated> {
+impl<'env> Connection<'env, Unconnected> {
     /// Allocates a new `Connection`. A `Connection` may not outlive its parent `Environment`.
     ///
     /// The Driver Manager allocates a structure in which to store information about the statement.
@@ -92,7 +92,7 @@ impl<'env> Connection<'env, Allocated> {
         data_source_name: &DSN,
         user: &U,
         pwd: &P,
-    ) -> Return<Connection<'env, Connected>, Connection<'env, Allocated>>
+    ) -> Return<Connection<'env, Connected>, Connection<'env, Unconnected>>
     where
         DSN: SqlStr + ?Sized,
         U: SqlStr + ?Sized,
@@ -104,7 +104,9 @@ impl<'env> Connection<'env, Allocated> {
             Error(()) => Error(self.transit()),
         }
     }
+}
 
+impl<'env, Connected> Connection<'env, Connected> {
     /// When an application has finished using a data source, it calls `disconnect`. `disconnect`
     /// disconnects the driver from the data source.
     ///
@@ -117,7 +119,7 @@ impl<'env> Connection<'env, Allocated> {
     /// operations on the same data source.
     pub fn disconnect(
         mut self,
-    ) -> Return<Connection<'env, Allocated>, Connection<'env, Connected>> {
+    ) -> Return<Connection<'env, Unconnected>, Connection<'env, Connected>> {
         match self.handle.disconnect() {
             Success(()) => Success(self.transit()),
             Info(()) => Info(self.transit()),

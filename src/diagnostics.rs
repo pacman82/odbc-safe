@@ -86,3 +86,16 @@ impl<H: Handle> Diagnostics for H {
         }
     }
 }
+
+impl<S, E> Diagnostics for Return<S, E>
+where
+    S: Diagnostics,
+    E: Diagnostics,
+{
+    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn {
+        match self {
+            &Success(ref s) | &Info(ref s) => s.diagnostics(rec_number, message_text),
+            &Error(ref e) => e.diagnostics(rec_number, message_text),
+        }
+    }
+}
