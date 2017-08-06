@@ -10,7 +10,7 @@ pub struct DiagResult {
     /// A five-character SQLSTATE code (and terminating NULL) for the diagnostic record
     /// `rec_number`. The first two characters indicate the class; the next three indicate the
     /// subclass. For more information, see [SQLSTATE][1]s.
-    /// [1]: https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/sqlstates
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/sqlstates
     pub state: State,
     /// Native error code specific to the data source.
     pub native_error: SQLINTEGER,
@@ -51,7 +51,7 @@ pub trait Diagnostics {
     ///                    number of characters to return is greater than the buffer length, the
     ///                    diagnostic message is truncated to `max(message_text.len() - 1, 0)`. For
     ///                    the format of the string, see [Diagnostic Messages][1]
-    /// [1]: https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/diagnostic-messages
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/diagnostic-messages
     fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn;
 }
 

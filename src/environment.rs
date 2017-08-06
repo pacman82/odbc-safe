@@ -10,6 +10,9 @@ use std::marker::PhantomData;
 /// * The current environment-level diagnostics
 /// * The handles of connections currently allocated on the environment
 /// * The current stetting of each environment attribute
+///
+/// See: [Environment Handles in the ODBC Reference][1]
+/// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/environment-handles
 #[derive(Debug)]
 pub struct Environment<V> {
     version: PhantomData<V>,
