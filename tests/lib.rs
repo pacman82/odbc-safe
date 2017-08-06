@@ -77,7 +77,17 @@ fn query_result() {
     let dbc = dbc.connect(b"PostgreSQL" as &[u8], b"postgres" as &[u8], b"" as &[u8])
         .unwrap();
     {
-        Statement::with_parent(&dbc).unwrap();
+        let stmt = Statement::with_parent(&dbc).unwrap();
+        match stmt.exec_direct(b"SELECT * FROM information_schema.tables" as &[u8]) {
+            ReturnNoData::Success(_) => (),
+            ReturnNoData::Info(s) => {
+                panic_with_diagnostic(&s);
+            }
+            ReturnNoData::NoData(_) => panic!("No Data"),
+            ReturnNoData::Error(s) => {
+                panic_with_diagnostic(&s);
+            }
+        }
     }
     dbc.disconnect().unwrap();
 }

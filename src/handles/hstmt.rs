@@ -46,9 +46,22 @@ impl<'env> HStmt<'env> {
 
         let mut out = null_mut();
         unsafe {
-            let result: Return<()> =
-                SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out).into();
+            let result: Return<()> = SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out)
+                .into();
             result.map(|()| HStmt { parent: PhantomData, handle: out as SQLHSTMT })
+        }
+    }
+
+    pub fn exec_direct<T>(&mut self, statement_text: &T) -> ReturnNoData<()>
+    where
+        T: SqlStr + ?Sized,
+    {
+        unsafe {
+            SQLExecDirect(
+                self.handle,
+                statement_text.as_ansi_ptr(),
+                statement_text.text_length_int(),
+            ).into()
         }
     }
 }

@@ -7,6 +7,8 @@ pub unsafe trait SqlStr {
     fn as_ansi_ptr(&self) -> *const SQLCHAR;
     /// Returns buffer length or SQL_NTS
     fn text_length(&self) -> SQLSMALLINT;
+    /// Returns buffer length or SQL_NTSL
+    fn text_length_int(&self) -> SQLINTEGER;
 }
 
 unsafe impl SqlStr for CStr {
@@ -16,6 +18,10 @@ unsafe impl SqlStr for CStr {
 
     fn text_length(&self) -> SQLSMALLINT {
         SQL_NTS
+    }
+
+    fn text_length_int(&self) -> SQLINTEGER {
+        SQL_NTSL
     }
 }
 
@@ -34,5 +40,16 @@ unsafe impl SqlStr for [u8] {
             );
         }
         self.len() as SQLSMALLINT
+    }
+
+    fn text_length_int(&self) -> SQLINTEGER {
+        if self.len() > SQLINTEGER::max_value() as usize {
+            panic!(
+                "Buffer length of {} is greater than SQLINTEGER::MAX: {}",
+                self.len(),
+                SQLINTEGER::max_value()
+            );
+        }
+        self.len() as SQLINTEGER
     }
 }
