@@ -78,15 +78,26 @@ fn query_result() {
         .unwrap();
     {
         let stmt = Statement::with_parent(&dbc).unwrap();
-        let stmt = match stmt.exec_direct(b"SELECT * FROM information_schema.tables" as &[u8]) {
-            ReturnNoData::Success(s) | ReturnNoData::Info(s) => {
-                assert_no_diagnostic(&s);
-                s
-            }
-            ReturnNoData::NoData(_) => panic!("No Data"),
-            ReturnNoData::Error(s) => panic!("{}", get_last_error(&s)),
-        };
+        let mut stmt =
+            match stmt.exec_direct(b"SELECT * FROM information_schema.tables" as &[u8]) {
+                ReturnNoData::Success(s) | ReturnNoData::Info(s) => {
+                    assert_no_diagnostic(&s);
+                    s
+                }
+                ReturnNoData::NoData(_) => panic!("No Data"),
+                ReturnNoData::Error(s) => panic!("{}", get_last_error(&s)),
+            };
         assert_eq!(12, stmt.num_result_cols().unwrap());
+        let stmt = loop {
+            stmt = match stmt.fetch() {
+                ReturnNoData::Success(s) => s,
+                ReturnNoData::Info(s) => s,
+                ReturnNoData::Error(s) => {
+                    panic!("Error during fetching row: {}", get_last_error(&s))
+                }
+                ReturnNoData::NoData(s) => break s,
+            };
+        };
     }
     dbc.disconnect().unwrap();
 }

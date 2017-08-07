@@ -84,6 +84,21 @@ impl<'con, HasResult> Statement<'con, HasResult> {
     pub fn num_result_cols(&self) -> Return<SQLSMALLINT> {
         self.handle.num_result_cols()
     }
+
+    /// Advances Cursor to next row
+    ///
+    /// See [SQLFetch][1]
+    /// See [Fetching a Row of Data][2]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlfetch-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/fetching-a-row-of-data
+    pub fn fetch(mut self) -> ReturnNoData<Self, Statement<'con, NoResult>> {
+        match self.handle.fetch() {
+            ReturnNoData::Success(()) => ReturnNoData::Success(self.transit()),
+            ReturnNoData::Info(()) => ReturnNoData::Info(self.transit()),
+            ReturnNoData::NoData(()) => ReturnNoData::NoData(self.transit()),
+            ReturnNoData::Error(()) => ReturnNoData::Error(self.transit()),
+        }
+    }
 }
 
 impl<'con, C> Diagnostics for Statement<'con, C> {

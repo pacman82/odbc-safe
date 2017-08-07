@@ -71,4 +71,8 @@ impl<'env> HStmt<'env> {
         let ret: Return<()> = ret.into();
         ret.map(|()| out)
     }
+
+    pub fn fetch(&mut self) -> ReturnNoData<()> {
+        unsafe { SQLFetch(self.handle).into() }
+    }
 }
