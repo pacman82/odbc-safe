@@ -82,7 +82,7 @@ fn query_result() {
             ReturnNoData::Success(s) |
             ReturnNoData::Info(s) => {
                 panic_with_diagnostic(&s);
-                assert_eq!(0, s.num_result_cols());
+                assert_eq!(0, s.num_result_cols().unwrap());
             }
             ReturnNoData::NoData(_) => panic!("No Data"),
             ReturnNoData::Error(s) => {
