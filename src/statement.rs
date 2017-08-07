@@ -76,6 +76,16 @@ impl<'con> Statement<'con, NoResult> {
     }
 }
 
+impl<'con, HasResult> Statement<'con, HasResult> {
+    /// Returns the number of columns of the result set
+    ///
+    /// See [SQLNumResultCols][1]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlnumresultcols-function
+    pub fn num_result_cols(&self) -> Return<SQLSMALLINT> {
+        self.handle.num_result_cols()
+    }
+}
+
 impl<'con, C> Diagnostics for Statement<'con, C> {
     fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn {
         self.handle.diagnostics(rec_number, message_text)

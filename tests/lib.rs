@@ -79,9 +79,10 @@ fn query_result() {
     {
         let stmt = Statement::with_parent(&dbc).unwrap();
         match stmt.exec_direct(b"SELECT * FROM information_schema.tables" as &[u8]) {
-            ReturnNoData::Success(_) => (),
+            ReturnNoData::Success(s) |
             ReturnNoData::Info(s) => {
                 panic_with_diagnostic(&s);
+                assert_eq!(0, s.num_result_cols());
             }
             ReturnNoData::NoData(_) => panic!("No Data"),
             ReturnNoData::Error(s) => {
