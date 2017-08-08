@@ -75,4 +75,26 @@ impl<'env> HStmt<'env> {
     pub fn fetch(&mut self) -> ReturnNoData<()> {
         unsafe { SQLFetch(self.handle).into() }
     }
+
+    pub fn get_data<T>(
+        &mut self,
+        col_or_param_num: SQLUSMALLINT,
+        target: &mut T,
+    ) -> ReturnNoData<Indicator>
+    where
+        T: Target,
+    {
+        let mut str_len_or_ind = 0;
+        let ret: ReturnNoData<()> = unsafe {
+            SQLGetData(
+                self.handle,
+                col_or_param_num,
+                T::c_data_type(),
+                target.value_ptr(),
+                target.buffer_len(),
+                &mut str_len_or_ind,
+            ).into()
+        };
+        ret.map(|()| str_len_or_ind.into())
+    }
 }

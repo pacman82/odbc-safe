@@ -99,6 +99,18 @@ impl<'con, HasResult> Statement<'con, HasResult> {
             ReturnNoData::Error(()) => ReturnNoData::Error(self.transit()),
         }
     }
+
+    // TODO: verify at compile time, that it is called after fetch
+    pub fn get_data<T>(
+        &mut self,
+        col_or_param_num: SQLUSMALLINT,
+        target: &mut T,
+    ) -> ReturnNoData<Indicator>
+    where
+        T: Target,
+    {
+        self.handle.get_data(col_or_param_num, target)
+    }
 }
 
 impl<'con, C> Diagnostics for Statement<'con, C> {

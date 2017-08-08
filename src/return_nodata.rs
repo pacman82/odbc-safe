@@ -14,7 +14,21 @@ pub enum ReturnNoData<T, E = ()> {
     Error(E),
 }
 
-impl<T, E> ReturnNoData<T, E> {}
+impl<T, E> ReturnNoData<T, E> {
+    /// Maps a `ReturnNoData<T,E>` to `ReturnNoData<U,E>` by applying a function to a contained
+    /// `Success` or `Info` value, leaving an `Error` or `NoData` value untouched.
+    pub fn map<F, U>(self, f: F) -> ReturnNoData<U, E>
+    where
+        F: FnOnce(T) -> U,
+    {
+        match self {
+            ReturnNoData::Success(t) => ReturnNoData::Success(f(t)),
+            ReturnNoData::Info(t) => ReturnNoData::Info(f(t)),
+            ReturnNoData::NoData(e) => ReturnNoData::NoData(e),
+            ReturnNoData::Error(e) => ReturnNoData::Error(e),
+        }
+    }
+}
 
 impl From<SQLRETURN> for ReturnNoData<()> {
     fn from(source: SQLRETURN) -> ReturnNoData<()> {

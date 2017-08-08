@@ -23,6 +23,8 @@ pub use statement::Statement;
 pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use sql_str::SqlStr;
 pub use diagnostics::{Diagnostics, DiagResult, DiagReturn};
+pub use target::Target;
+pub use indicator::Indicator;
 use version::Version;
 use handles::{Handle, HEnv, HDbc, HStmt};
 
@@ -35,3 +37,5 @@ mod diagnostics;
 mod environment;
 mod connection;
 mod statement;
+mod target;
+mod indicator;

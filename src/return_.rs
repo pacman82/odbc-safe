@@ -14,7 +14,7 @@ pub enum Return<T, E = ()> {
 pub use Return::{Success, Info, Error};
 
 impl<T, E> Return<T, E> {
-    /// Maps a `Return<T,E>` to `Result<U,E>` by applying a function to a contained `Success` or
+    /// Maps a `Return<T,E>` to `Return<U,E>` by applying a function to a contained `Success` or
     /// `Info` value, leaving an `Error` value untouched.
     pub fn map<F, U>(self, f: F) -> Return<U, E>
     where
