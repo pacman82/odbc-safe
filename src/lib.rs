@@ -23,7 +23,7 @@ pub use statement::Statement;
 pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use sql_str::SqlStr;
 pub use diagnostics::{Diagnostics, DiagResult, DiagReturn};
-pub use target::Target;
+pub use target::{Target, SqlTextBuf};
 pub use indicator::Indicator;
 use version::Version;
 use handles::{Handle, HEnv, HDbc, HStmt};

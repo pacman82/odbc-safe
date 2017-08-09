@@ -100,7 +100,11 @@ impl<'con, HasResult> Statement<'con, HasResult> {
         }
     }
 
-    // TODO: verify at compile time, that it is called after fetch
+
+    /// Retrieves data for a single column or output parameter.
+    ///
+    /// See [SQLGetData][1]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlgetdata-function
     pub fn get_data<T>(
         &mut self,
         col_or_param_num: SQLUSMALLINT,
@@ -109,6 +113,7 @@ impl<'con, HasResult> Statement<'con, HasResult> {
     where
         T: Target,
     {
+        // TODO: verify at compile time, that it is called after fetch
         self.handle.get_data(col_or_param_num, target)
     }
 }
