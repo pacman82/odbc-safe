@@ -1,6 +1,5 @@
 extern crate odbc_safe;
 use odbc_safe::*;
-use std::ffi::CStr;
 use std::str::from_utf8;
 
 fn main() {
@@ -22,7 +21,7 @@ fn execute_query<'a>(conn: &'a Connection<Connected>) -> Statement<'a, HasResult
     let stmt = Statement::with_parent(conn).unwrap();
     match stmt.exec_direct("SELECT * FROM MOVIES".as_bytes()) {
         ReturnNoData::Success(s) | ReturnNoData::Info(s) => s,
-        ReturnNoData::NoData(s) | ReturnNoData::Error(s) => panic!("No Result Set"),
+        ReturnNoData::NoData(_) | ReturnNoData::Error(_) => panic!("No Result Set"),
     }
 }
 
@@ -32,7 +31,7 @@ fn print_fields(mut result_set: Statement<HasResult>) {
     loop {
         result_set = match result_set.fetch() {
             ReturnNoData::Success(r) | ReturnNoData::Info(r) => r,
-            ReturnNoData::NoData(r) | ReturnNoData::Error(r) => break,
+            ReturnNoData::NoData(_) | ReturnNoData::Error(_) => break,
         };
         for index in 1..(cols + 1) {
             match result_set.get_data(index as u16, &mut buffer as &mut [u8]) {
