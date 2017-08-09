@@ -111,7 +111,7 @@ impl<'con, HasResult> Statement<'con, HasResult> {
         target: &mut T,
     ) -> ReturnNoData<Indicator>
     where
-        T: Target,
+        T: Target + ?Sized,
     {
         // TODO: verify at compile time, that it is called after fetch
         self.handle.get_data(col_or_param_num, target)

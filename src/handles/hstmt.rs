@@ -82,7 +82,7 @@ impl<'env> HStmt<'env> {
         target: &mut T,
     ) -> ReturnNoData<Indicator>
     where
-        T: Target,
+        T: Target + ?Sized,
     {
         let mut str_len_or_ind = 0;
         let ret: ReturnNoData<()> = unsafe {
