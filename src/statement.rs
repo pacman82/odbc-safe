@@ -13,8 +13,8 @@ use std::marker::PhantomData;
 /// See [Statement Handles][1]
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/statement-handles
 #[derive(Debug)]
-pub struct Statement<'con, C = NoResult> {
-    cursor: PhantomData<C>,
+pub struct Statement<'con, S = NoResult> {
+    state: PhantomData<S>,
     handle: HStmt<'con>,
 }
 
@@ -34,16 +34,63 @@ pub enum NoResult {}
 #[allow(missing_copy_implementations)]
 pub enum Positioned {}
 
-impl<'con, C> Statement<'con, C> {
+pub trait CursorState {}
+impl CursorState for HasResult {}
+impl CursorState for Positioned {}
+
+impl<'con, S> Statement<'con, S> {
     /// Provides access to the raw ODBC Statement Handle
     pub unsafe fn as_raw(&self) -> SQLHSTMT {
         self.handle.as_raw()
     }
 
-    fn transit<C2>(self) -> Statement<'con, C2> {
+    fn transit<S2>(self) -> Statement<'con, S2> {
         Statement {
             handle: self.handle,
-            cursor: PhantomData,
+            state: PhantomData,
+        }
+    }
+}
+
+impl<'con, C> Statement<'con, C>
+where
+    C: CursorState,
+{
+    /// Returns the number of columns of the result set
+    ///
+    /// See [SQLNumResultCols][1]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlnumresultcols-function
+    pub fn num_result_cols(&self) -> Return<SQLSMALLINT> {
+        self.handle.num_result_cols()
+    }
+
+    /// Advances Cursor to next row
+    ///
+    /// See [SQLFetch][1]
+    /// See [Fetching a Row of Data][2]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlfetch-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/fetching-a-row-of-data
+    pub fn fetch(mut self) -> ReturnNoData<Statement<'con, Positioned>, Statement<'con, NoResult>> {
+        match self.handle.fetch() {
+            ReturnNoData::Success(()) => ReturnNoData::Success(self.transit()),
+            ReturnNoData::Info(()) => ReturnNoData::Info(self.transit()),
+            ReturnNoData::NoData(()) => ReturnNoData::NoData(self.transit()),
+            ReturnNoData::Error(()) => ReturnNoData::Error(self.transit()),
+        }
+    }
+
+    /// Closes the cursor. Cursors only need to be closed explicitly if the Statement handle is
+    /// intended to be reused.
+    ///
+    /// See [SQLCloseCursor][1]
+    /// See [Closing the Cursor][2]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlclosecursor-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/closing-the-cursor
+    pub fn close_cursor(mut self) -> Return<Statement<'con, NoResult>, Statement<'con, C>> {
+        match self.handle.close_cursor() {
+            Success(()) => Success(self.transit()),
+            Info(()) => Info(self.transit()),
+            Error(()) => Error(self.transit()),
         }
     }
 }
@@ -54,7 +101,7 @@ impl<'con> Statement<'con, NoResult> {
         HStmt::allocate(parent.as_hdbc()).map(|handle| {
             Statement {
                 handle,
-                cursor: PhantomData,
+                state: PhantomData,
             }
         })
     }
@@ -81,56 +128,7 @@ impl<'con> Statement<'con, NoResult> {
     }
 }
 
-impl<'con> Statement<'con, HasResult> {
-    /// Returns the number of columns of the result set
-    ///
-    /// See [SQLNumResultCols][1]
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlnumresultcols-function
-    pub fn num_result_cols(&self) -> Return<SQLSMALLINT> {
-        self.handle.num_result_cols()
-    }
-
-    /// Advances Cursor to next row
-    ///
-    /// See [SQLFetch][1]
-    /// See [Fetching a Row of Data][2]
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlfetch-function
-    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/fetching-a-row-of-data
-    pub fn fetch(mut self) -> ReturnNoData<Statement<'con, Positioned>, Statement<'con, NoResult>> {
-        match self.handle.fetch() {
-            ReturnNoData::Success(()) => ReturnNoData::Success(self.transit()),
-            ReturnNoData::Info(()) => ReturnNoData::Info(self.transit()),
-            ReturnNoData::NoData(()) => ReturnNoData::NoData(self.transit()),
-            ReturnNoData::Error(()) => ReturnNoData::Error(self.transit()),
-        }
-    }
-}
-
 impl<'con> Statement<'con, Positioned> {
-    /// Returns the number of columns of the result set
-    ///
-    /// See [SQLNumResultCols][1]
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlnumresultcols-function
-    pub fn num_result_cols(&self) -> Return<SQLSMALLINT> {
-        self.handle.num_result_cols()
-    }
-
-    /// Advances Cursor to next row
-    ///
-    /// See [SQLFetch][1]
-    /// See [Fetching a Row of Data][2]
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlfetch-function
-    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/fetching-a-row-of-data
-    pub fn fetch(mut self) -> ReturnNoData<Self, Statement<'con, NoResult>> {
-        match self.handle.fetch() {
-            ReturnNoData::Success(()) => ReturnNoData::Success(self.transit()),
-            ReturnNoData::Info(()) => ReturnNoData::Info(self.transit()),
-            ReturnNoData::NoData(()) => ReturnNoData::NoData(self.transit()),
-            ReturnNoData::Error(()) => ReturnNoData::Error(self.transit()),
-        }
-    }
-
-
     /// Retrieves data for a single column or output parameter.
     ///
     /// See [SQLGetData][1]

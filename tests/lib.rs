@@ -89,7 +89,7 @@ fn query_result() {
             ReturnNoData::Success(s) => s,
             ReturnNoData::Info(s) => s,
             ReturnNoData::Error(s) => panic!("Error during fetching row: {}", get_last_error(&s)),
-            ReturnNoData::NoData(_) => panic!("No result set returned from SELECT"),
+            ReturnNoData::NoData(_) => panic!("Empty result set returned from SELECT"),
         };
         let mut buffer = [0u8; 256];
         if let ReturnNoData::Success(Indicator::Length(i)) =
