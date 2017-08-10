@@ -53,3 +53,34 @@ unsafe impl SqlStr for [u8] {
         self.len() as SQLINTEGER
     }
 }
+
+/// For passing a buffer without terminating NULL
+unsafe impl SqlStr for str {
+    fn as_ansi_ptr(&self) -> *const SQLCHAR {
+        self.as_ptr()
+    }
+
+    fn text_length(&self) -> SQLSMALLINT {
+        if self.len() > SQLSMALLINT::max_value() as usize {
+            panic!(
+                "Buffer length of {} is greater than SQLSMALLINT::MAX: {}",
+                self.len(),
+                SQLSMALLINT::max_value()
+            );
+        }
+        // str::len is in bytes, so this should work
+        self.len() as SQLSMALLINT
+    }
+
+    fn text_length_int(&self) -> SQLINTEGER {
+        if self.len() > SQLINTEGER::max_value() as usize {
+            panic!(
+                "Buffer length of {} is greater than SQLINTEGER::MAX: {}",
+                self.len(),
+                SQLINTEGER::max_value()
+            );
+        }
+
+        self.len() as SQLINTEGER
+    }
+}

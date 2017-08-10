@@ -13,13 +13,12 @@ fn main() {
 
 fn connect(env: &Environment<Odbc3>) -> Connection<Connected> {
     let conn = Connection::with_parent(env).unwrap();
-    conn.connect("TestDataSource".as_bytes(), "".as_bytes(), "".as_bytes())
-        .unwrap()
+    conn.connect("TestDataSource", "", "").unwrap()
 }
 
 fn execute_query<'a>(conn: &'a Connection<Connected>) -> Statement<'a, HasResult> {
     let stmt = Statement::with_parent(conn).unwrap();
-    match stmt.exec_direct("SELECT * FROM MOVIES".as_bytes()) {
+    match stmt.exec_direct("SELECT * FROM MOVIES") {
         ReturnNoData::Success(s) | ReturnNoData::Info(s) => s,
         ReturnNoData::NoData(_) | ReturnNoData::Error(_) => panic!("No Result Set"),
     }

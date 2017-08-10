@@ -21,8 +21,7 @@ fn wrong_datasource() {
     let env = Environment::new().unwrap();
     let env: Environment<Odbc3> = env.declare_version().unwrap();
     let dbc = Connection::with_parent(&env).unwrap();
-    dbc.connect(b"DoesntExist" as &[u8], b"" as &[u8], b"" as &[u8])
-        .unwrap();
+    dbc.connect("DoesntExist", "", "").unwrap();
 }
 
 #[test]
@@ -41,7 +40,7 @@ fn diagnostics() {
     let env: Environment<Odbc3> = env.declare_version().unwrap();
 
     let dbc = Connection::with_parent(&env).unwrap();
-    let dbc = dbc.connect(b"DoesntExist" as &[u8], b"" as &[u8], b"" as &[u8]);
+    let dbc = dbc.connect("DoesntExist", "", "");
     if let Error(d) = dbc {
         let mut message = [0; 512];
         match d.diagnostics(1, &mut message) {
@@ -60,7 +59,7 @@ fn connect_to_postgres() {
     let env = Environment::new().unwrap();
     let env: Environment<Odbc3> = env.declare_version().unwrap();
     let dbc = Connection::with_parent(&env).unwrap();
-    let dbc = dbc.connect(b"PostgreSQL" as &[u8], b"postgres" as &[u8], b"" as &[u8]);
+    let dbc = dbc.connect("PostgreSQL", "postgres", "");
     match dbc {
         Success(c) => assert_no_diagnostic(&c.disconnect()),
         Info(c) => assert_no_diagnostic(&c),
@@ -74,19 +73,17 @@ fn query_result() {
     let env = Environment::new().unwrap();
     let env: Environment<Odbc3> = env.declare_version().unwrap();
     let dbc = Connection::with_parent(&env).unwrap();
-    let dbc = dbc.connect(b"PostgreSQL" as &[u8], b"postgres" as &[u8], b"" as &[u8])
-        .unwrap();
+    let dbc = dbc.connect("PostgreSQL", "postgres", "").unwrap();
     {
         let stmt = Statement::with_parent(&dbc).unwrap();
-        let mut stmt =
-            match stmt.exec_direct(b"SELECT * FROM information_schema.tables" as &[u8]) {
-                ReturnNoData::Success(s) | ReturnNoData::Info(s) => {
-                    assert_no_diagnostic(&s);
-                    s
-                }
-                ReturnNoData::NoData(_) => panic!("No Data"),
-                ReturnNoData::Error(s) => panic!("{}", get_last_error(&s)),
-            };
+        let mut stmt = match stmt.exec_direct("SELECT * FROM information_schema.tables") {
+            ReturnNoData::Success(s) | ReturnNoData::Info(s) => {
+                assert_no_diagnostic(&s);
+                s
+            }
+            ReturnNoData::NoData(_) => panic!("No Data"),
+            ReturnNoData::Error(s) => panic!("{}", get_last_error(&s)),
+        };
         assert_eq!(12, stmt.num_result_cols().unwrap());
         let stmt = loop {
             stmt = match stmt.fetch() {
