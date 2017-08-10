@@ -76,7 +76,7 @@ fn query_result() {
     let dbc = dbc.connect("PostgreSQL", "postgres", "").unwrap();
     {
         let stmt = Statement::with_parent(&dbc).unwrap();
-        let mut stmt = match stmt.exec_direct("SELECT title FROM Movies WHERE year=1968") {
+        let stmt = match stmt.exec_direct("SELECT title FROM Movies WHERE year=1968") {
             ReturnNoData::Success(s) | ReturnNoData::Info(s) => {
                 assert_no_diagnostic(&s);
                 s
@@ -85,23 +85,19 @@ fn query_result() {
             ReturnNoData::Error(s) => panic!("{}", get_last_error(&s)),
         };
         assert_eq!(1, stmt.num_result_cols().unwrap());
-        loop {
-            stmt = match stmt.fetch() {
-                ReturnNoData::Success(s) => s,
-                ReturnNoData::Info(s) => s,
-                ReturnNoData::Error(s) => {
-                    panic!("Error during fetching row: {}", get_last_error(&s))
-                }
-                ReturnNoData::NoData(_) => break,
-            };
-            let mut buffer = [0u8; 256];
-            if let ReturnNoData::Success(Indicator::Length(i)) =
-                stmt.get_data(1, &mut buffer as &mut [u8])
-            {
-                assert_eq!("2001: A Space Odyssey".as_bytes(), &buffer[..(i as usize)]);
-            } else {
-                panic!("No field found!");
-            }
+        let mut stmt = match stmt.fetch() {
+            ReturnNoData::Success(s) => s,
+            ReturnNoData::Info(s) => s,
+            ReturnNoData::Error(s) => panic!("Error during fetching row: {}", get_last_error(&s)),
+            ReturnNoData::NoData(_) => panic!("No result set returned from SELECT"),
+        };
+        let mut buffer = [0u8; 256];
+        if let ReturnNoData::Success(Indicator::Length(i)) =
+            stmt.get_data(1, &mut buffer as &mut [u8])
+        {
+            assert_eq!("2001: A Space Odyssey".as_bytes(), &buffer[..(i as usize)]);
+        } else {
+            panic!("No field found!");
         }
     }
     dbc.disconnect().unwrap();

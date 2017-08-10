@@ -27,29 +27,31 @@ fn execute_query<'a>(conn: &'a Connection<Connected>) -> Statement<'a, HasResult
     }
 }
 
-fn print_fields(mut result_set: Statement<HasResult>) {
+fn print_fields(result_set: Statement<HasResult>) {
     let cols = result_set.num_result_cols().unwrap();
     let mut buffer = [0u8; 512];
+    let mut cursor = match result_set.fetch() {
+        ReturnNoData::Success(r) | ReturnNoData::Info(r) => r,
+        ReturnNoData::NoData(_) | ReturnNoData::Error(_) => return,
+    };
     loop {
-        result_set = match result_set.fetch() {
-            ReturnNoData::Success(r) | ReturnNoData::Info(r) => r,
-            ReturnNoData::NoData(_) | ReturnNoData::Error(_) => break,
-        };
         for index in 1..(cols + 1) {
-            match result_set.get_data(index as u16, &mut buffer as &mut [u8]) {
-                ReturnNoData::Success(ind) | ReturnNoData::Info(ind) => {
-                    match ind {
-                        Indicator::NoTotal => panic!("No Total"),
-                        Indicator::Null => println!("NULL"),
-                        Indicator::Length(l) => {
-                            print!("{}", from_utf8(&buffer[0..l as usize]).unwrap());
-                        }
+            match cursor.get_data(index as u16, &mut buffer as &mut [u8]) {
+                ReturnNoData::Success(ind) | ReturnNoData::Info(ind) => match ind {
+                    Indicator::NoTotal => panic!("No Total"),
+                    Indicator::Null => println!("NULL"),
+                    Indicator::Length(l) => {
+                        print!("{}", from_utf8(&buffer[0..l as usize]).unwrap());
                     }
-                }
+                },
                 ReturnNoData::NoData(_) | ReturnNoData::Error(_) => panic!("No Field Data"),
             }
             print!(" | ");
         }
+        cursor = match cursor.fetch() {
+            ReturnNoData::Success(r) | ReturnNoData::Info(r) => r,
+            ReturnNoData::NoData(_) | ReturnNoData::Error(_) => break,
+        };
         println!("");
     }
 }

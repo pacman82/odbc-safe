@@ -23,11 +23,16 @@ pub struct Statement<'con, C = NoResult> {
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
 pub enum HasResult {}
-/// Cursor state of `Statement`. A statement is likely to enter this state after executing e.g. a
+/// State used by `Statement`. A statement is likely to enter this state after executing e.g. a
 /// `CREATE TABLE` statement.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
 pub enum NoResult {}
+/// Cursor state of `Statement`. A statement will enter this state after a successful call to
+/// `fetch()`
+#[derive(Debug)]
+#[allow(missing_copy_implementations)]
+pub enum Positioned {}
 
 impl<'con, C> Statement<'con, C> {
     /// Provides access to the raw ODBC Statement Handle
@@ -76,7 +81,32 @@ impl<'con> Statement<'con, NoResult> {
     }
 }
 
-impl<'con, HasResult> Statement<'con, HasResult> {
+impl<'con> Statement<'con, HasResult> {
+    /// Returns the number of columns of the result set
+    ///
+    /// See [SQLNumResultCols][1]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlnumresultcols-function
+    pub fn num_result_cols(&self) -> Return<SQLSMALLINT> {
+        self.handle.num_result_cols()
+    }
+
+    /// Advances Cursor to next row
+    ///
+    /// See [SQLFetch][1]
+    /// See [Fetching a Row of Data][2]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlfetch-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/fetching-a-row-of-data
+    pub fn fetch(mut self) -> ReturnNoData<Statement<'con, Positioned>, Statement<'con, NoResult>> {
+        match self.handle.fetch() {
+            ReturnNoData::Success(()) => ReturnNoData::Success(self.transit()),
+            ReturnNoData::Info(()) => ReturnNoData::Info(self.transit()),
+            ReturnNoData::NoData(()) => ReturnNoData::NoData(self.transit()),
+            ReturnNoData::Error(()) => ReturnNoData::Error(self.transit()),
+        }
+    }
+}
+
+impl<'con> Statement<'con, Positioned> {
     /// Returns the number of columns of the result set
     ///
     /// See [SQLNumResultCols][1]
@@ -113,7 +143,6 @@ impl<'con, HasResult> Statement<'con, HasResult> {
     where
         T: Target + ?Sized,
     {
-        // TODO: verify at compile time, that it is called after fetch
         self.handle.get_data(col_or_param_num, target)
     }
 }
