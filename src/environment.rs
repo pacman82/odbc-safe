@@ -78,7 +78,19 @@ impl Environment<NoVersion> {
     ///
     /// This method is a shorthand for `declare_version::<Odbc3m8>`.
     pub fn declare_version_3_8(self) -> Return<Environment<Odbc3m8>, Environment<NoVersion>> {
-        self.declare_version::<Odbc3m8>()
+        self.declare_version()
+    }
+
+    /// Before an application allocates a connection which specification it follows. Currently
+    /// these bindings only support ODBC 3.x.
+    ///
+    /// It is valid to specify ODBC 3.x even then connecting to an ODBC 2.x driver. Applications
+    /// must however avoid calling 3.x functionality on 2.x drivers. Since drivers are connected at
+    /// runtime, these kind of errors can not be catched by the type system.
+    ///
+    /// This method is a shorthand for `declare_version::<Odbc3>`.
+    pub fn declare_version_3(self) -> Return<Environment<Odbc3>, Environment<NoVersion>> {
+        self.declare_version()
     }
 }
 

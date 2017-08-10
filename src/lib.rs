@@ -25,7 +25,7 @@ pub use sql_str::SqlStr;
 pub use diagnostics::{Diagnostics, DiagResult, DiagReturn};
 pub use target::Target;
 pub use indicator::Indicator;
-use version::Version;
+pub use version::Version;
 use handles::{Handle, HEnv, HDbc, HStmt};
 
 mod version;

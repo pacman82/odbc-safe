@@ -1,6 +1,8 @@
 use odbc_sys::*;
 
-pub trait Version {
+/// Type indicates an ODBC Version
+pub unsafe trait Version {
+    /// The `SQL_ATTR_ODBC_VERSION` used with `SQLSetEnvAttr`
     fn constant() -> OdbcVersion;
 }
 
@@ -16,13 +18,13 @@ pub struct Odbc3;
 #[derive(Debug, Clone, Copy)]
 pub struct Odbc3m8;
 
-impl Version for Odbc3 {
+unsafe impl Version for Odbc3 {
     fn constant() -> OdbcVersion {
         SQL_OV_ODBC3
     }
 }
 
-impl Version for Odbc3m8 {
+unsafe impl Version for Odbc3m8 {
     fn constant() -> OdbcVersion {
         SQL_OV_ODBC3_80
     }

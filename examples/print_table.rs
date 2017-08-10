@@ -5,13 +5,16 @@ use std::str::from_utf8;
 fn main() {
 
     let env = Environment::new().unwrap();
-    let env: Environment<Odbc3> = env.declare_version().unwrap();
+    let env = env.declare_version_3_8().unwrap();
     let conn = connect(&env);
     print_fields(execute_query(&conn));
     conn.disconnect().unwrap();
 }
 
-fn connect(env: &Environment<Odbc3>) -> Connection<Connected> {
+fn connect<V>(env: &Environment<V>) -> Connection<Connected>
+where
+    V: Version,
+{
     let conn = Connection::with_parent(env).unwrap();
     conn.connect("TestDataSource", "", "").unwrap()
 }
