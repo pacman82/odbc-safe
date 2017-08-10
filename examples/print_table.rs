@@ -5,7 +5,7 @@ use std::str::from_utf8;
 fn main() {
 
     let env = Environment::new().unwrap();
-    let env = env.declare_version_3_8().unwrap();
+    let env = env.declare_version_3().unwrap();
     let conn = connect(&env);
     print_fields(execute_query(&conn));
     conn.disconnect().unwrap();
