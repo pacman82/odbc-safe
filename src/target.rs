@@ -14,7 +14,7 @@ pub unsafe trait Target {
 
 unsafe impl Target for [SQLCHAR] {
     fn c_data_type() -> SqlCDataType {
-        SQL_C_CHAR
+        SQL_C_BINARY
     }
 
     fn value_ptr(&mut self) -> SQLPOINTER {
