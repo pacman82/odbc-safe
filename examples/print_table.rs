@@ -21,7 +21,7 @@ where
 
 fn execute_query<'a>(conn: &'a Connection<Connected>) -> Statement<'a, HasResult> {
     let stmt = Statement::with_parent(conn).unwrap();
-    match stmt.exec_direct("SELECT * FROM MOVIES") {
+    match stmt.exec_direct("SELECT * FROM MOVIES;") {
         ReturnNoData::Success(s) | ReturnNoData::Info(s) => s,
         ReturnNoData::NoData(_) | ReturnNoData::Error(_) => panic!("No Result Set"),
     }

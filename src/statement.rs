@@ -80,7 +80,7 @@ where
     }
 
     /// Closes the cursor. Cursors only need to be closed explicitly if the Statement handle is
-    /// intended to be reused.
+    /// intended to be reused, but a result set is not consumed.
     ///
     /// See [SQLCloseCursor][1]
     /// See [Closing the Cursor][2]

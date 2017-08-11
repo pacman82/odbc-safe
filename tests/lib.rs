@@ -76,7 +76,7 @@ fn query_result() {
     let dbc = dbc.connect("PostgreSQL", "postgres", "").unwrap();
     {
         let stmt = Statement::with_parent(&dbc).unwrap();
-        let stmt = match stmt.exec_direct("SELECT title FROM Movies WHERE year=1968") {
+        let stmt = match stmt.exec_direct("SELECT title FROM Movies WHERE year=1968;") {
             ReturnNoData::Success(s) | ReturnNoData::Info(s) => {
                 assert_no_diagnostic(&s);
                 s
