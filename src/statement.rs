@@ -70,12 +70,12 @@ where
     /// See [Fetching a Row of Data][2]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlfetch-function
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/fetching-a-row-of-data
-    pub fn fetch(mut self) -> ReturnNoData<Statement<'con, Positioned>, Statement<'con, NoResult>> {
+    pub fn fetch(mut self) -> ReturnOption<Statement<'con, Positioned>, Statement<'con, NoResult>> {
         match self.handle.fetch() {
-            ReturnNoData::Success(()) => ReturnNoData::Success(self.transit()),
-            ReturnNoData::Info(()) => ReturnNoData::Info(self.transit()),
-            ReturnNoData::NoData(()) => ReturnNoData::NoData(self.transit()),
-            ReturnNoData::Error(()) => ReturnNoData::Error(self.transit()),
+            ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
+            ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
+            ReturnOption::NoData(()) => ReturnOption::NoData(self.transit()),
+            ReturnOption::Error(()) => ReturnOption::Error(self.transit()),
         }
     }
 
@@ -115,15 +115,15 @@ impl<'con> Statement<'con, NoResult> {
     pub fn exec_direct<T>(
         mut self,
         statement_text: &T,
-    ) -> ReturnNoData<Statement<'con, HasResult>, Statement<'con, NoResult>>
+    ) -> ReturnOption<Statement<'con, HasResult>, Statement<'con, NoResult>>
     where
         T: SqlStr + ?Sized,
     {
         match self.handle.exec_direct(statement_text) {
-            ReturnNoData::Success(()) => ReturnNoData::Success(self.transit()),
-            ReturnNoData::Info(()) => ReturnNoData::Info(self.transit()),
-            ReturnNoData::NoData(()) => ReturnNoData::NoData(self.transit()),
-            ReturnNoData::Error(()) => ReturnNoData::Error(self.transit()),
+            ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
+            ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
+            ReturnOption::NoData(()) => ReturnOption::NoData(self.transit()),
+            ReturnOption::Error(()) => ReturnOption::Error(self.transit()),
         }
     }
 }
@@ -137,7 +137,7 @@ impl<'con> Statement<'con, Positioned> {
         &mut self,
         col_or_param_num: SQLUSMALLINT,
         target: &mut T,
-    ) -> ReturnNoData<Indicator>
+    ) -> ReturnOption<Indicator>
     where
         T: Target + ?Sized,
     {

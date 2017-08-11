@@ -16,7 +16,7 @@
 extern crate odbc_sys;
 
 pub use return_::{Return, Success, Info, Error};
-pub use return_nodata::ReturnNoData;
+pub use return_option::ReturnOption;
 pub use environment::Environment;
 pub use connection::{Connection, Connected, Unconnected};
 pub use statement::{Statement, HasResult};
@@ -30,7 +30,7 @@ use handles::{Handle, HEnv, HDbc, HStmt};
 
 mod version;
 mod return_;
-mod return_nodata;
+mod return_option;
 mod sql_str;
 mod handles;
 mod diagnostics;

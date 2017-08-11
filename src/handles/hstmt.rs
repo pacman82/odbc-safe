@@ -50,7 +50,7 @@ impl<'env> HStmt<'env> {
         }
     }
 
-    pub fn exec_direct<T>(&mut self, statement_text: &T) -> ReturnNoData<()>
+    pub fn exec_direct<T>(&mut self, statement_text: &T) -> ReturnOption<()>
     where
         T: SqlStr + ?Sized,
     {
@@ -70,7 +70,7 @@ impl<'env> HStmt<'env> {
         ret.map(|()| out)
     }
 
-    pub fn fetch(&mut self) -> ReturnNoData<()> {
+    pub fn fetch(&mut self) -> ReturnOption<()> {
         unsafe { SQLFetch(self.handle).into() }
     }
 
@@ -78,12 +78,12 @@ impl<'env> HStmt<'env> {
         &mut self,
         col_or_param_num: SQLUSMALLINT,
         target: &mut T,
-    ) -> ReturnNoData<Indicator>
+    ) -> ReturnOption<Indicator>
     where
         T: Target + ?Sized,
     {
         let mut str_len_or_ind = 0;
-        let ret: ReturnNoData<()> = unsafe {
+        let ret: ReturnOption<()> = unsafe {
             SQLGetData(
                 self.handle,
                 col_or_param_num,
