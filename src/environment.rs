@@ -23,7 +23,7 @@ pub struct Environment<V> {
 
 impl<V> Environment<V> {
     /// Provides access to the raw ODBC environment handle.
-    pub unsafe fn as_raw(&self) -> SQLHENV {
+    pub fn as_raw(&self) -> SQLHENV {
         self.handle.as_raw()
     }
 

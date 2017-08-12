@@ -40,7 +40,7 @@ impl CursorState for Positioned {}
 
 impl<'con, S> Statement<'con, S> {
     /// Provides access to the raw ODBC Statement Handle
-    pub unsafe fn as_raw(&self) -> SQLHSTMT {
+    pub fn as_raw(&self) -> SQLHSTMT {
         self.handle.as_raw()
     }
 

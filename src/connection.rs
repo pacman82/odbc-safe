@@ -27,9 +27,28 @@ pub enum Unconnected {}
 pub enum Connected {}
 
 impl<'env, Any> Connection<'env, Any> {
+    /// Consumes the `Connection`, returning the wrapped raw `SQLHDBC`
+    ///
+    /// Leaks the Connection Handle. This is usually done in order to pass ownership from Rust to
+    /// another language. After calling this method, the caller is responsible for invoking
+    /// `SQLFreeHandle`.
+    pub fn into_raw(self) -> SQLHDBC {
+        self.handle.into_raw()
+    }
+
     /// Provides access to the raw ODBC Connection Handle
-    pub unsafe fn as_raw(&self) -> SQLHDBC {
+    pub fn as_raw(&self) -> SQLHDBC {
         self.handle.as_raw()
+    }
+
+    /// May only be invoked with a valid Statement Handle which has been allocated using
+    /// `SQLAllocHandle`. Special care must be taken that the Connection Handle passed is in a
+    /// State which matches the type.
+    pub unsafe fn from_raw(raw: SQLHDBC) -> Self{
+        Connection{
+            handle : HDbc::from_raw(raw),
+            state: PhantomData
+        }
     }
 
     /// Express state transiton

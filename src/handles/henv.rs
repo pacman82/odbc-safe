@@ -21,18 +21,16 @@ impl Drop for HEnv {
         unsafe {
             match SQLFreeHandle(SQL_HANDLE_ENV, self.handle as SQLHANDLE) {
                 SQL_SUCCESS => (),
-                other => {
-                    if !panicking() {
-                        panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
-                    }
-                }
+                other => if !panicking() {
+                    panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
+                },
             }
         }
     }
 }
 
 unsafe impl Handle for HEnv {
-    unsafe fn handle(&self) -> SQLHANDLE {
+    fn handle(&self) -> SQLHANDLE {
         self.handle as SQLHANDLE
     }
 
@@ -57,7 +55,7 @@ impl HEnv {
     }
 
     /// Provides access to the raw ODBC environment handle.
-    pub unsafe fn as_raw(&self) -> SQLHENV {
+    pub fn as_raw(&self) -> SQLHENV {
         self.handle
     }
 }

@@ -23,6 +23,6 @@ mod hdbc;
 mod hstmt;
 
 pub unsafe trait Handle {
-    unsafe fn handle(&self) -> SQLHANDLE;
+    fn handle(&self) -> SQLHANDLE;
     fn handle_type() -> HandleType;
 }

@@ -2,6 +2,7 @@ use super::*;
 use std::ptr::null_mut;
 use std::marker::PhantomData;
 use std::thread::panicking;
+use std::mem::forget;
 
 #[derive(Debug)]
 pub struct HDbc<'env> {
@@ -16,18 +17,16 @@ impl<'env> Drop for HDbc<'env> {
         unsafe {
             match SQLFreeHandle(SQL_HANDLE_DBC, self.handle as SQLHANDLE) {
                 SQL_SUCCESS => (),
-                other => {
-                    if !panicking() {
-                        panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
-                    }
-                }
+                other => if !panicking() {
+                    panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
+                },
             }
         }
     }
 }
 
 unsafe impl<'env> Handle for HDbc<'env> {
-    unsafe fn handle(&self) -> SQLHANDLE {
+    fn handle(&self) -> SQLHANDLE {
         self.handle as SQLHANDLE
     }
 
@@ -37,8 +36,29 @@ unsafe impl<'env> Handle for HDbc<'env> {
 }
 
 impl<'env> HDbc<'env> {
-    pub unsafe fn as_raw(&self) -> SQLHDBC {
+    /// Consumes the `Connection`, returning the wrapped raw `SQLHDBC`
+    ///
+    /// Leaks the Connection Handle. This is usually done in order to pass ownership from Rust to
+    /// another language. After calling this method, the caller is responsible for invoking
+    /// `SQLFreeHandle`.
+    pub fn into_raw(self) -> SQLHDBC {
+        let raw = self.handle;
+        forget(self);
+        raw
+    }
+
+    /// Provides access to the raw ODBC Connection Handle
+    pub fn as_raw(&self) -> SQLHDBC {
         self.handle
+    }
+
+    /// May only be invoked with a valid Statement Handle which has been allocated using
+    /// `SQLAllocHandle`.
+    pub unsafe fn from_raw(raw: SQLHDBC) -> Self {
+        HDbc {
+            handle: raw,
+            parent: PhantomData,
+        }
     }
 
     /// Allocates a new Connection Handle
@@ -46,8 +66,8 @@ impl<'env> HDbc<'env> {
 
         let mut out = null_mut();
         unsafe {
-            let result: Return<()> = SQLAllocHandle(Self::handle_type(), parent.handle(), &mut out)
-                .into();
+            let result: Return<()> =
+                SQLAllocHandle(Self::handle_type(), parent.handle(), &mut out).into();
             result.map(|()| HDbc { parent: PhantomData, handle: out as SQLHDBC })
         }
     }
