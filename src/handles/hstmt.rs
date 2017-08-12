@@ -16,9 +16,11 @@ impl<'con> Drop for HStmt<'con> {
         unsafe {
             match SQLFreeHandle(SQL_HANDLE_STMT, self.handle as SQLHANDLE) {
                 SQL_SUCCESS => (),
-                other => if !panicking() {
-                    panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
-                },
+                other => {
+                    if !panicking() {
+                        panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
+                    }
+                }
             }
         }
     }
@@ -44,8 +46,8 @@ impl<'env> HStmt<'env> {
 
         let mut out = null_mut();
         unsafe {
-            let result: Return<()> =
-                SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out).into();
+            let result: Return<()> = SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out)
+                .into();
             result.map(|()| HStmt { parent: PhantomData, handle: out as SQLHSTMT })
         }
     }

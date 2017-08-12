@@ -22,8 +22,10 @@ where
 fn execute_query<'a>(conn: &'a Connection<Connected>) -> Statement<'a, HasResult> {
     let stmt = Statement::with_parent(conn).unwrap();
     match stmt.exec_direct("SELECT * FROM MOVIES;") {
-        ReturnOption::Success(s) | ReturnOption::Info(s) => s,
-        ReturnOption::NoData(_) | ReturnOption::Error(_) => panic!("No Result Set"),
+        ReturnOption::Success(s) |
+        ReturnOption::Info(s) => s,
+        ReturnOption::NoData(_) |
+        ReturnOption::Error(_) => panic!("No Result Set"),
     }
 }
 
@@ -31,26 +33,34 @@ fn print_fields(result_set: Statement<HasResult>) {
     let cols = result_set.num_result_cols().unwrap();
     let mut buffer = [0u8; 512];
     let mut cursor = match result_set.fetch() {
-        ReturnOption::Success(r) | ReturnOption::Info(r) => r,
-        ReturnOption::NoData(_) | ReturnOption::Error(_) => return,
+        ReturnOption::Success(r) |
+        ReturnOption::Info(r) => r,
+        ReturnOption::NoData(_) |
+        ReturnOption::Error(_) => return,
     };
     loop {
         for index in 1..(cols + 1) {
             match cursor.get_data(index as u16, &mut buffer as &mut [u8]) {
-                ReturnOption::Success(ind) | ReturnOption::Info(ind) => match ind {
-                    Indicator::NoTotal => panic!("No Total"),
-                    Indicator::Null => println!("NULL"),
-                    Indicator::Length(l) => {
-                        print!("{}", from_utf8(&buffer[0..l as usize]).unwrap());
+                ReturnOption::Success(ind) |
+                ReturnOption::Info(ind) => {
+                    match ind {
+                        Indicator::NoTotal => panic!("No Total"),
+                        Indicator::Null => println!("NULL"),
+                        Indicator::Length(l) => {
+                            print!("{}", from_utf8(&buffer[0..l as usize]).unwrap());
+                        }
                     }
-                },
-                ReturnOption::NoData(_) | ReturnOption::Error(_) => panic!("No Field Data"),
+                }
+                ReturnOption::NoData(_) |
+                ReturnOption::Error(_) => panic!("No Field Data"),
             }
             print!(" | ");
         }
         cursor = match cursor.fetch() {
-            ReturnOption::Success(r) | ReturnOption::Info(r) => r,
-            ReturnOption::NoData(_) | ReturnOption::Error(_) => break,
+            ReturnOption::Success(r) |
+            ReturnOption::Info(r) => r,
+            ReturnOption::NoData(_) |
+            ReturnOption::Error(_) => break,
         };
         println!("");
     }

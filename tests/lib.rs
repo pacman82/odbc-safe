@@ -77,7 +77,8 @@ fn query_result() {
     {
         let stmt = Statement::with_parent(&dbc).unwrap();
         let stmt = match stmt.exec_direct("SELECT title FROM Movies WHERE year=1968;") {
-            ReturnOption::Success(s) | ReturnOption::Info(s) => {
+            ReturnOption::Success(s) |
+            ReturnOption::Info(s) => {
                 assert_no_diagnostic(&s);
                 s
             }
@@ -109,10 +110,13 @@ fn assert_no_diagnostic(diag: &Diagnostics) {
     use std::str;
     let mut buffer = [0; 512];
     match diag.diagnostics(1, &mut buffer) {
-        DiagReturn::Success(dr) | DiagReturn::Info(dr) => panic!(
-            "{}",
-            str::from_utf8(&buffer[0..(dr.text_length as usize)]).unwrap()
-        ),
+        DiagReturn::Success(dr) |
+        DiagReturn::Info(dr) => {
+            panic!(
+                "{}",
+                str::from_utf8(&buffer[0..(dr.text_length as usize)]).unwrap()
+            )
+        }
         DiagReturn::Error => panic!("Error during fetching diagnostic record"),
         DiagReturn::NoData => (),
     }
@@ -122,10 +126,12 @@ fn get_last_error(diag: &Diagnostics) -> String {
     use std::str;
     let mut buffer = [0; 512];
     match diag.diagnostics(1, &mut buffer) {
-        DiagReturn::Success(dr) | DiagReturn::Info(dr) => str::from_utf8(
-            &buffer[0..(dr.text_length as usize)],
-        ).unwrap()
-            .to_owned(),
+        DiagReturn::Success(dr) |
+        DiagReturn::Info(dr) => {
+            str::from_utf8(&buffer[0..(dr.text_length as usize)])
+                .unwrap()
+                .to_owned()
+        }
         DiagReturn::Error => panic!("Error during fetching diagnostic record"),
         DiagReturn::NoData => panic!("No diagnostic available"),
     }
