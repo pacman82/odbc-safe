@@ -45,8 +45,21 @@ impl<T, E> Return<T, E> {
         match self {
             Success(v) | Info(v) => v,
             Error(_) => {
-                panic!("Unwrapping `Return` failed. Use `Diagnostics` to obtain more information.")
+                panic!("Unwrapping `Return` failed. Use diagnostics to obtain more information.")
             }
+        }
+    }
+
+    /// Transforms the `Return<T,E>` into a `Result<T,U>`, mapping `Success(v) | Info(v)` to
+    /// `Ok(v)` and `Error(err)` to `Err(err.into())`.
+    pub fn success<U>(self) -> Result<T, U>
+    where
+        U: From<E>,
+    {
+        match self {
+            Success(v) => Ok(v),
+            Info(v) => Ok(v),
+            Error(e) => Err(e.into()),
         }
     }
 }
