@@ -1,5 +1,6 @@
 [package]
 name = "odbc-safe"
+description = "Enables writing ODBC Applications in safe Rust"
 version = "0.1.0"
 authors = ["Markus Klein <markus-klein@live.de>"]
 license = "MIT"
