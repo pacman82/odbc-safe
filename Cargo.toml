@@ -2,6 +2,12 @@
 name = "odbc-safe"
 version = "0.1.0"
 authors = ["Markus Klein <markus-klein@live.de>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/pacman82/odbc-safe"
+homepage = "https://github.com/pacman82/odbc-safe"
+keywords = ["odbc", "database", "sql"]
+categories = ["api-bindings", "database"]
 
 [dependencies]
 odbc-sys = "0.5.0"
@@ -9,3 +15,6 @@ odbc-sys = "0.5.0"
 [features]
 default = []
 travis = []
+
+[badges]
+travis-ci = { repository = "pacman82/odbc-safe", branch = "master" }
