@@ -1,23 +1,31 @@
 use odbc_sys::*;
+use std::os::raw::c_void;
 use std::cmp::min;
 use std::mem::size_of;
 
-/// Indicates a type which can be used as a target in `Statement::get_data()`.
-pub unsafe trait Target {
-    /// C Data type of the buffer returned by `value_ptr()`.
+/// See [C Data Types in ODBC][1]
+/// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/c-data-types-in-odbc
+pub unsafe trait CDataType {
+    /// C Data type of the buffer returned by `mut_sql_ptr()`.
     fn c_data_type() -> SqlCDataType;
+    /// Const sql pointer
+    fn sql_ptr(&self) -> *const c_void;
     /// Pointer to the buffer in which should be filled with data.
-    fn value_ptr(&mut self) -> SQLPOINTER;
-    /// Length of the buffer returned by `value_ptr()` in bytes.
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER;
+    /// Length of the buffer returned by `mut_sql_ptr()` in bytes.
     fn buffer_len(&self) -> SQLLEN;
 }
 
-unsafe impl Target for [SQLCHAR] {
+unsafe impl CDataType for [SQLCHAR] {
     fn c_data_type() -> SqlCDataType {
         SQL_C_BINARY
     }
 
-    fn value_ptr(&mut self) -> SQLPOINTER {
+    fn sql_ptr(&self) -> *const c_void {
+        self.as_ptr() as SQLPOINTER
+    }
+
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER {
         self.as_mut_ptr() as SQLPOINTER
     }
 
@@ -26,12 +34,17 @@ unsafe impl Target for [SQLCHAR] {
     }
 }
 
-unsafe impl Target for SQLSMALLINT {
+unsafe impl CDataType for SQLSMALLINT {
     fn c_data_type() -> SqlCDataType {
         SQL_C_SSHORT
     }
 
-    fn value_ptr(&mut self) -> SQLPOINTER {
+    fn sql_ptr(&self) -> *const c_void {
+        let ptr: *const Self = self;
+        ptr as *const c_void
+    }
+
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER {
         let ptr: *mut Self = self;
         ptr as SQLPOINTER
     }
@@ -41,12 +54,17 @@ unsafe impl Target for SQLSMALLINT {
     }
 }
 
-unsafe impl Target for SQLUSMALLINT {
+unsafe impl CDataType for SQLUSMALLINT {
     fn c_data_type() -> SqlCDataType {
         SQL_C_USHORT
     }
 
-    fn value_ptr(&mut self) -> SQLPOINTER {
+    fn sql_ptr(&self) -> *const c_void {
+        let ptr: *const Self = self;
+        ptr as *const c_void
+    }
+
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER {
         let ptr: *mut Self = self;
         ptr as SQLPOINTER
     }
@@ -56,12 +74,17 @@ unsafe impl Target for SQLUSMALLINT {
     }
 }
 
-unsafe impl Target for SQLINTEGER {
+unsafe impl CDataType for SQLINTEGER {
     fn c_data_type() -> SqlCDataType {
         SQL_C_SLONG
     }
 
-    fn value_ptr(&mut self) -> SQLPOINTER {
+    fn sql_ptr(&self) -> *const c_void {
+        let ptr: *const Self = self;
+        ptr as *const c_void
+    }
+
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER {
         let ptr: *mut Self = self;
         ptr as SQLPOINTER
     }
@@ -71,12 +94,17 @@ unsafe impl Target for SQLINTEGER {
     }
 }
 
-unsafe impl Target for SQLUINTEGER {
+unsafe impl CDataType for SQLUINTEGER {
     fn c_data_type() -> SqlCDataType {
         SQL_C_ULONG
     }
 
-    fn value_ptr(&mut self) -> SQLPOINTER {
+    fn sql_ptr(&self) -> *const c_void {
+        let ptr: *const Self = self;
+        ptr as *const c_void
+    }
+
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER {
         let ptr: *mut Self = self;
         ptr as SQLPOINTER
     }
@@ -86,12 +114,17 @@ unsafe impl Target for SQLUINTEGER {
     }
 }
 
-unsafe impl Target for f32 {
+unsafe impl CDataType for f32 {
     fn c_data_type() -> SqlCDataType {
         SQL_C_FLOAT
     }
 
-    fn value_ptr(&mut self) -> SQLPOINTER {
+    fn sql_ptr(&self) -> *const c_void {
+        let ptr: *const Self = self;
+        ptr as *const c_void
+    }
+
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER {
         let ptr: *mut Self = self;
         ptr as SQLPOINTER
     }
@@ -101,12 +134,17 @@ unsafe impl Target for f32 {
     }
 }
 
-unsafe impl Target for f64 {
+unsafe impl CDataType for f64 {
     fn c_data_type() -> SqlCDataType {
         SQL_C_DOUBLE
     }
 
-    fn value_ptr(&mut self) -> SQLPOINTER {
+    fn sql_ptr(&self) -> *const c_void {
+        let ptr: *const Self = self;
+        ptr as *const c_void
+    }
+
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER {
         let ptr: *mut Self = self;
         ptr as SQLPOINTER
     }
@@ -116,12 +154,17 @@ unsafe impl Target for f64 {
     }
 }
 
-unsafe impl Target for i8 {
+unsafe impl CDataType for i8 {
     fn c_data_type() -> SqlCDataType {
         SQL_C_STINYINT
     }
 
-    fn value_ptr(&mut self) -> SQLPOINTER {
+    fn sql_ptr(&self) -> *const c_void {
+        let ptr: *const Self = self;
+        ptr as *const c_void
+    }
+
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER {
         let ptr: *mut Self = self;
         ptr as SQLPOINTER
     }
@@ -131,12 +174,17 @@ unsafe impl Target for i8 {
     }
 }
 
-unsafe impl Target for SQLCHAR {
+unsafe impl CDataType for SQLCHAR {
     fn c_data_type() -> SqlCDataType {
         SQL_C_UTINYINT
     }
 
-    fn value_ptr(&mut self) -> SQLPOINTER {
+    fn sql_ptr(&self) -> *const c_void {
+        let ptr: *const Self = self;
+        ptr as *const c_void
+    }
+
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER {
         let ptr: *mut Self = self;
         ptr as SQLPOINTER
     }
@@ -146,12 +194,17 @@ unsafe impl Target for SQLCHAR {
     }
 }
 
-unsafe impl Target for i64 {
+unsafe impl CDataType for i64 {
     fn c_data_type() -> SqlCDataType {
         SQL_C_SBIGINT
     }
 
-    fn value_ptr(&mut self) -> SQLPOINTER {
+    fn sql_ptr(&self) -> *const c_void {
+        let ptr: *const Self = self;
+        ptr as *const c_void
+    }
+
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER {
         let ptr: *mut Self = self;
         ptr as SQLPOINTER
     }
@@ -161,12 +214,17 @@ unsafe impl Target for i64 {
     }
 }
 
-unsafe impl Target for u64 {
+unsafe impl CDataType for u64 {
     fn c_data_type() -> SqlCDataType {
         SQL_C_UBIGINT
     }
 
-    fn value_ptr(&mut self) -> SQLPOINTER {
+    fn sql_ptr(&self) -> *const c_void {
+        let ptr: *const Self = self;
+        ptr as *const c_void
+    }
+
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER {
         let ptr: *mut Self = self;
         ptr as SQLPOINTER
     }

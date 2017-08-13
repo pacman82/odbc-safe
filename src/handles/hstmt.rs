@@ -4,14 +4,16 @@ use std::marker::PhantomData;
 use std::thread::panicking;
 
 #[derive(Debug)]
-pub struct HStmt<'con> {
-    /// Connection may not outlive the environment used to allocate it
+pub struct HStmt<'con, 'param> {
+    /// Statement may not outlive the connection used to allocate it.
     parent: PhantomData<&'con HDbc<'con>>,
-    /// Invariant: Connection handle is always valid
+    /// Statement may not outlive parameters bound to it.
+    parameters: PhantomData<&'param [u8]>,
+    /// Invariant: Connection handle is always valid.
     handle: SQLHSTMT,
 }
 
-impl<'con> Drop for HStmt<'con> {
+impl<'con, 'param> Drop for HStmt<'con, 'param> {
     fn drop(&mut self) {
         unsafe {
             match SQLFreeHandle(SQL_HANDLE_STMT, self.handle as SQLHANDLE) {
@@ -24,7 +26,7 @@ impl<'con> Drop for HStmt<'con> {
     }
 }
 
-unsafe impl<'env> Handle for HStmt<'env> {
+unsafe impl<'env, 'param> Handle for HStmt<'env, 'param> {
     fn handle(&self) -> SQLHANDLE {
         self.handle as SQLHANDLE
     }
@@ -34,7 +36,7 @@ unsafe impl<'env> Handle for HStmt<'env> {
     }
 }
 
-impl<'env> HStmt<'env> {
+impl<'env, 'param> HStmt<'env, 'param> {
     pub fn as_raw(&self) -> SQLHSTMT {
         self.handle
     }
@@ -46,7 +48,7 @@ impl<'env> HStmt<'env> {
         unsafe {
             let result: Return<()> =
                 SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out).into();
-            result.map(|()| HStmt { parent: PhantomData, handle: out as SQLHSTMT })
+            result.map(|()| HStmt { parent: PhantomData, parameters: PhantomData, handle: out as SQLHSTMT })
         }
     }
 
@@ -80,7 +82,7 @@ impl<'env> HStmt<'env> {
         target: &mut T,
     ) -> ReturnOption<Indicator>
     where
-        T: Target + ?Sized,
+        T: CDataType + ?Sized,
     {
         let mut str_len_or_ind = 0;
         let ret: ReturnOption<()> = unsafe {
@@ -88,7 +90,7 @@ impl<'env> HStmt<'env> {
                 self.handle,
                 col_or_param_num,
                 T::c_data_type(),
-                target.value_ptr(),
+                target.mut_sql_ptr(),
                 target.buffer_len(),
                 &mut str_len_or_ind,
             ).into()
@@ -98,5 +100,31 @@ impl<'env> HStmt<'env> {
 
     pub fn close_cursor(&mut self) -> Return<()> {
         unsafe { SQLCloseCursor(self.handle).into() }
+    }
+
+    pub fn bind_input_parameter<T>(
+        &mut self,
+        parameter_number: SQLUSMALLINT,
+        parameter_type: DataType,
+        value: Option<&'param T>,
+    ) -> Return<()>
+    where
+        T: CDataType + ?Sized,
+    {
+        let mut indicator = if value.is_some() { 0 } else { SQL_NULL_DATA };
+        unsafe {
+            SQLBindParameter(
+                self.handle,
+                parameter_number,
+                SQL_PARAM_INPUT,
+                T::c_data_type(),
+                parameter_type.sql_data_type(),
+                parameter_type.column_size(),
+                parameter_type.decimal_digits(),
+                value.map_or(null_mut(), |v| v.sql_ptr() as SQLPOINTER),
+                0,
+                &mut indicator,
+            ).into()
+        }
     }
 }

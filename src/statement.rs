@@ -13,9 +13,9 @@ use std::marker::PhantomData;
 /// See [Statement Handles][1]
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/statement-handles
 #[derive(Debug)]
-pub struct Statement<'con, S = NoResult> {
+pub struct Statement<'con, 'param, S = NoResult> {
     state: PhantomData<S>,
-    handle: HStmt<'con>,
+    handle: HStmt<'con, 'param>,
 }
 
 /// Cursor state of `Statement`. A statement is likely to enter this state after executing e.g a
@@ -38,13 +38,13 @@ pub trait CursorState {}
 impl CursorState for HasResult {}
 impl CursorState for Positioned {}
 
-impl<'con, S> Statement<'con, S> {
+impl<'con, 'param, S> Statement<'con, 'param, S> {
     /// Provides access to the raw ODBC Statement Handle
     pub fn as_raw(&self) -> SQLHSTMT {
         self.handle.as_raw()
     }
 
-    fn transit<S2>(self) -> Statement<'con, S2> {
+    fn transit<S2>(self) -> Statement<'con, 'param, S2> {
         Statement {
             handle: self.handle,
             state: PhantomData,
@@ -52,7 +52,7 @@ impl<'con, S> Statement<'con, S> {
     }
 }
 
-impl<'con, C> Statement<'con, C>
+impl<'con, 'param, C> Statement<'con, 'param, C>
 where
     C: CursorState,
 {
@@ -70,7 +70,9 @@ where
     /// See [Fetching a Row of Data][2]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlfetch-function
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/fetching-a-row-of-data
-    pub fn fetch(mut self) -> ReturnOption<Statement<'con, Positioned>, Statement<'con, NoResult>> {
+    pub fn fetch(
+        mut self,
+    ) -> ReturnOption<Statement<'con, 'param, Positioned>, Statement<'con, 'param, NoResult>> {
         match self.handle.fetch() {
             ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
             ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
@@ -86,7 +88,9 @@ where
     /// See [Closing the Cursor][2]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlclosecursor-function
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/closing-the-cursor
-    pub fn close_cursor(mut self) -> Return<Statement<'con, NoResult>, Statement<'con, C>> {
+    pub fn close_cursor(
+        mut self,
+    ) -> Return<Statement<'con, 'param, NoResult>, Statement<'con, 'param, C>> {
         match self.handle.close_cursor() {
             Success(()) => Success(self.transit()),
             Info(()) => Info(self.transit()),
@@ -95,7 +99,7 @@ where
     }
 }
 
-impl<'con> Statement<'con, NoResult> {
+impl<'con, 'param> Statement<'con, 'param, NoResult> {
     /// Allocates a new `Statement`
     pub fn with_parent(parent: &'con Connection<Connected>) -> Return<Self> {
         HStmt::allocate(parent.as_hdbc()).map(|handle| {
@@ -115,7 +119,7 @@ impl<'con> Statement<'con, NoResult> {
     pub fn exec_direct<T>(
         mut self,
         statement_text: &T,
-    ) -> ReturnOption<Statement<'con, HasResult>, Statement<'con, NoResult>>
+    ) -> ReturnOption<Statement<'con, 'param, HasResult>, Statement<'con, 'param, NoResult>>
     where
         T: SqlStr + ?Sized,
     {
@@ -128,7 +132,7 @@ impl<'con> Statement<'con, NoResult> {
     }
 }
 
-impl<'con> Statement<'con, Positioned> {
+impl<'con, 'param> Statement<'con, 'param, Positioned> {
     /// Retrieves data for a single column or output parameter.
     ///
     /// See [SQLGetData][1]
@@ -139,13 +143,13 @@ impl<'con> Statement<'con, Positioned> {
         target: &mut T,
     ) -> ReturnOption<Indicator>
     where
-        T: Target + ?Sized,
+        T: CDataType + ?Sized,
     {
         self.handle.get_data(col_or_param_num, target)
     }
 }
 
-impl<'con, C> Diagnostics for Statement<'con, C> {
+impl<'con, 'param, C> Diagnostics for Statement<'con, 'param, C> {
     fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn {
         self.handle.diagnostics(rec_number, message_text)
     }
