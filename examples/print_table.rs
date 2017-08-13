@@ -15,7 +15,7 @@ impl<D: Diagnostics> From<D> for LastError {
                     .to_owned(),
             ),
             ReturnOption::Error(()) => panic!("Error during fetching diagnostic record"),
-            ReturnOption::NoData(()) => panic!("No diagnostic record present"),
+            ReturnOption::NoData(()) => LastError("No Diagnostic Record present".to_owned()),
         }
     }
 }
