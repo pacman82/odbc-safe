@@ -16,11 +16,9 @@ impl<'con, 'param> Drop for HStmt<'con> {
         unsafe {
             match SQLFreeHandle(SQL_HANDLE_STMT, self.handle as SQLHANDLE) {
                 SQL_SUCCESS => (),
-                other => {
-                    if !panicking() {
-                        panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
-                    }
-                }
+                other => if !panicking() {
+                    panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
+                },
             }
         }
     }
@@ -46,8 +44,8 @@ impl<'env, 'param> HStmt<'env> {
 
         let mut out = null_mut();
         unsafe {
-            let result: Return<()> = SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out)
-                .into();
+            let result: Return<()> =
+                SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out).into();
             result.map(|()| HStmt { parent: PhantomData, handle: out as SQLHSTMT })
         }
     }
@@ -133,6 +131,19 @@ impl<'env, 'param> HStmt<'env> {
             0,
             &mut indicator,
         ).into()
+    }
+
+    pub fn prepare<T>(&mut self, statement_text: T) -> Return<()>
+    where
+        T: SqlStr,
+    {
+        unsafe {
+            SQLPrepare(
+                self.handle,
+                statement_text.as_ansi_ptr(),
+                statement_text.text_length_int(),
+            ).into()
+        }
     }
 
     pub fn reset_parameters(&mut self) -> Return<()> {

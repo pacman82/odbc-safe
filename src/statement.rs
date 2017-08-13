@@ -24,7 +24,7 @@ pub struct Statement<'con, 'param, S = NoResult> {
 /// `SELECT` query.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
-pub enum HasResult {}
+pub enum Opened {}
 /// State used by `Statement`. A statement is likely to enter this state after executing e.g. a
 /// `CREATE TABLE` statement.
 #[derive(Debug)]
@@ -37,7 +37,7 @@ pub enum NoResult {}
 pub enum Positioned {}
 
 pub trait CursorState {}
-impl CursorState for HasResult {}
+impl CursorState for Opened {}
 impl CursorState for Positioned {}
 
 impl<'con, 'param, S> Statement<'con, 'param, S> {
@@ -167,7 +167,7 @@ impl<'con, 'param> Statement<'con, 'param, NoResult> {
     pub fn exec_direct<T>(
         mut self,
         statement_text: &T,
-    ) -> ReturnOption<Statement<'con, 'param, HasResult>, Statement<'con, 'param, NoResult>>
+    ) -> ReturnOption<Statement<'con, 'param, Opened>, Statement<'con, 'param, NoResult>>
     where
         T: SqlStr + ?Sized,
     {
