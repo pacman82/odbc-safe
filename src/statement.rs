@@ -15,7 +15,9 @@ use std::marker::PhantomData;
 #[derive(Debug)]
 pub struct Statement<'con, 'param, S = NoResult> {
     state: PhantomData<S>,
-    handle: HStmt<'con, 'param>,
+    /// Statement may not outlive parameters bound to it.
+    parameters: PhantomData<&'param [u8]>,
+    handle: HStmt<'con>,
 }
 
 /// Cursor state of `Statement`. A statement is likely to enter this state after executing e.g a
@@ -44,9 +46,51 @@ impl<'con, 'param, S> Statement<'con, 'param, S> {
         self.handle.as_raw()
     }
 
-    fn transit<S2>(self) -> Statement<'con, 'param, S2> {
+    /// Binds a parameter to a parameter marker in an SQL Statement
+    ///
+    /// # Result
+    /// This method will destroy the statement and create a new one which may not outlive the bound
+    /// parameter. This is to ensure that the statement will not derefernce an invalid pointer
+    /// during execution. Use `reset_parameters` to reset the bound parameters and increase the
+    /// `'param` lifetime back to `'static`.
+    ///
+    /// # Arguments
+    /// * `parameter_number` - Index of the marker to bind to the parameter. Starting at `1`
+    /// * `parameter_type` - SQL Type of the parameter
+    /// * `value` - Reference to bind to the marker
+    ///
+    /// See [SQLBindParameter Function][1]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlbindparameter-function#columnsize-argument
+    pub fn bind_input_parameter<'p, T>(
+        mut self,
+        parameter_number: SQLUSMALLINT,
+        parameter_type: DataType,
+        value: Option<&'p T>,
+    ) -> Return<Statement<'con, 'p, S>, Statement<'con, 'param, S>>
+    where
+        T: CDataType + ?Sized,
+        'param : 'p
+    {
+        unsafe{
+        match self.handle
+            .bind_input_parameter(parameter_number, parameter_type, value){
+                Success(()) => Success(self.transit()),
+                Info(()) => Info(self.transit()),
+                Error(()) => Error(self.transit()),
+            }
+        }
+    }
+
+    /// Unbinds the parameters from the parameter markers
+    pub fn reset_parameters(mut self) -> Statement<'con, 'static, S> {
+        self.handle.reset_parameters().unwrap();
+        self.transit()
+    }
+
+    fn transit<'p, S2>(self) -> Statement<'con, 'p, S2> {
         Statement {
             handle: self.handle,
+            parameters: PhantomData,
             state: PhantomData,
         }
     }
@@ -105,6 +149,7 @@ impl<'con, 'param> Statement<'con, 'param, NoResult> {
         HStmt::allocate(parent.as_hdbc()).map(|handle| {
             Statement {
                 handle,
+                parameters: PhantomData,
                 state: PhantomData,
             }
         })

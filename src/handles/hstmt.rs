@@ -4,16 +4,14 @@ use std::marker::PhantomData;
 use std::thread::panicking;
 
 #[derive(Debug)]
-pub struct HStmt<'con, 'param> {
+pub struct HStmt<'con> {
     /// Statement may not outlive the connection used to allocate it.
     parent: PhantomData<&'con HDbc<'con>>,
-    /// Statement may not outlive parameters bound to it.
-    parameters: PhantomData<&'param [u8]>,
     /// Invariant: Connection handle is always valid.
     handle: SQLHSTMT,
 }
 
-impl<'con, 'param> Drop for HStmt<'con, 'param> {
+impl<'con, 'param> Drop for HStmt<'con> {
     fn drop(&mut self) {
         unsafe {
             match SQLFreeHandle(SQL_HANDLE_STMT, self.handle as SQLHANDLE) {
@@ -26,7 +24,7 @@ impl<'con, 'param> Drop for HStmt<'con, 'param> {
     }
 }
 
-unsafe impl<'env, 'param> Handle for HStmt<'env, 'param> {
+unsafe impl<'env, 'param> Handle for HStmt<'env> {
     fn handle(&self) -> SQLHANDLE {
         self.handle as SQLHANDLE
     }
@@ -36,7 +34,7 @@ unsafe impl<'env, 'param> Handle for HStmt<'env, 'param> {
     }
 }
 
-impl<'env, 'param> HStmt<'env, 'param> {
+impl<'env, 'param> HStmt<'env> {
     pub fn as_raw(&self) -> SQLHSTMT {
         self.handle
     }
@@ -48,7 +46,7 @@ impl<'env, 'param> HStmt<'env, 'param> {
         unsafe {
             let result: Return<()> =
                 SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out).into();
-            result.map(|()| HStmt { parent: PhantomData, parameters: PhantomData, handle: out as SQLHSTMT })
+            result.map(|()| HStmt { parent: PhantomData, handle: out as SQLHSTMT })
         }
     }
 
@@ -102,29 +100,40 @@ impl<'env, 'param> HStmt<'env, 'param> {
         unsafe { SQLCloseCursor(self.handle).into() }
     }
 
-    pub fn bind_input_parameter<T>(
+    /// Binds a parameter to a parameter marker in an SQL Statement
+    ///
+    /// #Unsafe
+    ///
+    /// It is the callers responsibility to make sure the bound parameters live long enough.
+    pub unsafe fn bind_input_parameter<T>(
         &mut self,
         parameter_number: SQLUSMALLINT,
         parameter_type: DataType,
-        value: Option<&'param T>,
+        value: Option<&T>,
     ) -> Return<()>
     where
         T: CDataType + ?Sized,
     {
-        let mut indicator = if value.is_some() { 0 } else { SQL_NULL_DATA };
-        unsafe {
-            SQLBindParameter(
-                self.handle,
-                parameter_number,
-                SQL_PARAM_INPUT,
-                T::c_data_type(),
-                parameter_type.sql_data_type(),
-                parameter_type.column_size(),
-                parameter_type.decimal_digits(),
-                value.map_or(null_mut(), |v| v.sql_ptr() as SQLPOINTER),
-                0,
-                &mut indicator,
-            ).into()
-        }
+        let mut indicator = if let Some(v) = value {
+            v.buffer_len()
+        } else {
+            SQL_NULL_DATA
+        };
+        SQLBindParameter(
+            self.handle,
+            parameter_number,
+            SQL_PARAM_INPUT,
+            T::c_data_type(),
+            parameter_type.sql_data_type(),
+            parameter_type.column_size(),
+            parameter_type.decimal_digits(),
+            value.map_or(null_mut(), |v| v.sql_ptr() as SQLPOINTER),
+            0,
+            &mut indicator,
+        ).into()
+    }
+
+    pub fn reset_parameters(&mut self) -> Return<()> {
+        unsafe { SQLFreeStmt(self.handle, SQL_RESET_PARAMS).into() }
     }
 }
