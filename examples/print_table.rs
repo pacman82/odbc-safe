@@ -9,13 +9,13 @@ impl<D: Diagnostics> From<D> for LastError {
     fn from(source: D) -> Self {
         let mut buffer = [0; 512];
         match source.diagnostics(1, &mut buffer) {
-            DiagReturn::Success(dr) | DiagReturn::Info(dr) => LastError(
+            ReturnOption::Success(dr) | ReturnOption::Info(dr) => LastError(
                 from_utf8(&buffer[0..(dr.text_length as usize)])
                     .unwrap()
                     .to_owned(),
             ),
-            DiagReturn::Error => panic!("Error during fetching diagnostic record"),
-            DiagReturn::NoData => panic!("No diagnostic record present"),
+            ReturnOption::Error(()) => panic!("Error during fetching diagnostic record"),
+            ReturnOption::NoData(()) => panic!("No diagnostic record present"),
         }
     }
 }

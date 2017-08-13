@@ -253,7 +253,7 @@ impl<'con, 'param, A> Statement<'con, 'param, Positioned, A> {
 }
 
 impl<'con, 'param, C> Diagnostics for Statement<'con, 'param, C> {
-    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn {
+    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> ReturnOption<DiagResult> {
         self.handle.diagnostics(rec_number, message_text)
     }
 }

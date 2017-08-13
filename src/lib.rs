@@ -22,7 +22,7 @@ pub use connection::{Connection, Connected, Unconnected};
 pub use statement::{Statement, NoCursor, Opened, Positioned, Unprepared, Prepared};
 pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use sql_str::SqlStr;
-pub use diagnostics::{Diagnostics, DiagResult, DiagReturn};
+pub use diagnostics::{Diagnostics, DiagResult};
 pub use c_data_type::CDataType;
 pub use data_type::DataType;
 pub use indicator::Indicator;

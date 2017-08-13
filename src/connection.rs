@@ -141,7 +141,7 @@ impl<'env> Connection<'env, Connected> {
 }
 
 impl<'env, S> Diagnostics for Connection<'env, S> {
-    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn {
+    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> ReturnOption<DiagResult> {
         self.handle.diagnostics(rec_number, message_text)
     }
 }

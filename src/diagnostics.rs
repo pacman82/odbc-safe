@@ -19,23 +19,23 @@ pub struct DiagResult {
     pub text_length: SQLSMALLINT,
 }
 
-/// Returned by `Diagnostics::diagnostics`
-#[derive(Debug, Clone, Copy)]
-pub enum DiagReturn {
-    /// The function successfully returned diagnostic information.
-    Success(DiagResult),
-    /// The `message_text` buffer was too small to hold the requested diagnostic message. No
-    /// diagnostic records were generated. To determine that a truncation occurred, the application
-    /// must compare the buffer length to the actual number of bytes available, which is found in
-    /// `DiagResult::text_length`
-    Info(DiagResult),
-    /// `rec_number` was negative or `0`.
-    Error,
-    /// `rec_number` was greater than the number of diagnostic records that existed for the handle
-    /// specified in Handle. The function also returns `NoData` for any positive `rec_number` if
-    /// there are no diagnostic records available.
-    NoData,
-}
+// /// Returned by `Diagnostics::diagnostics`
+// #[derive(Debug, Clone, Copy)]
+// pub enum DiagReturn {
+//     /// The function successfully returned diagnostic information.
+//     Success(DiagResult),
+//     /// The `message_text` buffer was too small to hold the requested diagnostic message. No
+//     /// diagnostic records were generated. To determine that a truncation occurred, the application
+//     /// must compare the buffer length to the actual number of bytes available, which is found in
+//     /// `DiagResult::text_length`
+//     Info(DiagResult),
+//     /// `rec_number` was negative or `0`.
+//     Error,
+//     /// `rec_number` was greater than the number of diagnostic records that existed for the handle
+//     /// specified in Handle. The function also returns `NoData` for any positive `rec_number` if
+//     /// there are no diagnostic records available.
+//     NoData,
+// }
 
 /// A type implementing this trait is able to provide diagnostic information regarding the last
 /// method call.
@@ -51,12 +51,24 @@ pub trait Diagnostics {
     ///                    number of characters to return is greater than the buffer length, the
     ///                    diagnostic message is truncated to `max(message_text.len() - 1, 0)`. For
     ///                    the format of the string, see [Diagnostic Messages][1]
+    ///
+    /// # Result
+    ///`
+    /// * `Success` - The function successfully returned diagnostic information.
+    /// * `Info` - The `message_text` buffer was too small to hold the requested diagnostic message.
+    ///            No diagnostic records were generated. To determine that a truncation occurred,
+    ///            the application must compare the buffer length to the actual number of bytes
+    ///            available, which is found in `DiagResult::text_length`
+    /// * `Error` - `rec_number` was negative or `0`.
+    /// * `NoData` - `rec_number` was greater than the number of diagnostic records that existed
+    ///              for the specified Handle. The function also returns `NoData` for any positive
+    ///              `rec_number` if there are no diagnostic records available.
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/diagnostic-messages
-    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn;
+    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> ReturnOption<DiagResult>;
 }
 
 impl<H: Handle> Diagnostics for H {
-    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn {
+    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> ReturnOption<DiagResult> {
         unsafe {
             let mut text_length = 0;
             let mut state = [0; 6];
@@ -77,10 +89,10 @@ impl<H: Handle> Diagnostics for H {
                 native_error: native_error,
             };
             match ret {
-                SQL_SUCCESS => DiagReturn::Success(result),
-                SQL_SUCCESS_WITH_INFO => DiagReturn::Info(result),
-                SQL_ERROR => DiagReturn::Error,
-                SQL_NO_DATA => DiagReturn::NoData,
+                SQL_SUCCESS => ReturnOption::Success(result),
+                SQL_SUCCESS_WITH_INFO => ReturnOption::Info(result),
+                SQL_ERROR => ReturnOption::Error(()),
+                SQL_NO_DATA => ReturnOption::NoData(()),
                 unexpected => panic!("SQLGetDiagRec returned: {:?}", unexpected),
             }
         }
@@ -92,7 +104,7 @@ where
     S: Diagnostics,
     E: Diagnostics,
 {
-    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> DiagReturn {
+    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> ReturnOption<DiagResult> {
         match self {
             &Success(ref s) | &Info(ref s) => s.diagnostics(rec_number, message_text),
             &Error(ref e) => e.diagnostics(rec_number, message_text),
