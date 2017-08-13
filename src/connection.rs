@@ -44,10 +44,10 @@ impl<'env, Any> Connection<'env, Any> {
     /// May only be invoked with a valid Statement Handle which has been allocated using
     /// `SQLAllocHandle`. Special care must be taken that the Connection Handle passed is in a
     /// State which matches the type.
-    pub unsafe fn from_raw(raw: SQLHDBC) -> Self{
-        Connection{
-            handle : HDbc::from_raw(raw),
-            state: PhantomData
+    pub unsafe fn from_raw(raw: SQLHDBC) -> Self {
+        Connection {
+            handle: HDbc::from_raw(raw),
+            state: PhantomData,
         }
     }
 

@@ -69,11 +69,14 @@ impl<'con, 'param, S> Statement<'con, 'param, S> {
     ) -> Return<Statement<'con, 'p, S>, Statement<'con, 'param, S>>
     where
         T: CDataType + ?Sized,
-        'param : 'p
+        'param: 'p,
     {
-        unsafe{
-        match self.handle
-            .bind_input_parameter(parameter_number, parameter_type, value){
+        unsafe {
+            match self.handle.bind_input_parameter(
+                parameter_number,
+                parameter_type,
+                value,
+            ) {
                 Success(()) => Success(self.transit()),
                 Info(()) => Info(self.transit()),
                 Error(()) => Error(self.transit()),

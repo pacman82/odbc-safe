@@ -6,9 +6,9 @@ pub enum DataType {
     /// Fixed sized single byte character data
     Char(SQLULEN),
     /// Exact numerical, with (Precision, Scale)
-    Numeric(SQLULEN,SQLSMALLINT),
+    Numeric(SQLULEN, SQLSMALLINT),
     /// Exact numerical, with (Precision, Scale)
-    Decimal(SQLULEN,SQLSMALLINT),
+    Decimal(SQLULEN, SQLSMALLINT),
     /// Integer numerical with precision 10
     Integer,
     /// Small integer numerical with precision 5
@@ -21,18 +21,6 @@ pub enum DataType {
     Double,
     /// Variadic sized single byte character data
     Varchar(SQLULEN),
-
-    // SQL_DATETIME = 9,
-
-    // //SQL extended datatypes:
-    // SQL_EXT_LONGVARCHAR = -1,
-    // SQL_EXT_BINARY = -2,
-    // SQL_EXT_VARBINARY = -3,
-    // SQL_EXT_LONGVARBINARY = -4,
-    // SQL_EXT_BIGINT = -5,
-    // SQL_EXT_TINYINT = -6,
-    // SQL_EXT_BIT = -7,
-    // SQL_EXT_GUID = -11,
 }
 
 /// Determines the type stored at the data source
@@ -40,7 +28,6 @@ pub enum DataType {
 /// See [Data Types][1]
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/appendixes/appendix-d-data-types
 impl DataType {
-
     /// See [SQL Data Types][1]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/appendixes/sql-data-types
     pub fn sql_data_type(&self) -> SqlDataType {
