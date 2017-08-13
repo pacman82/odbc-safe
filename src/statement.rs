@@ -13,8 +13,9 @@ use std::marker::PhantomData;
 /// See [Statement Handles][1]
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/statement-handles
 #[derive(Debug)]
-pub struct Statement<'con, 'param, S = NoResult> {
-    state: PhantomData<S>,
+pub struct Statement<'con, 'param, C = NoCursor, A = Unprepared> {
+    cursor: PhantomData<C>,
+    access_plan: PhantomData<A>,
     /// Statement may not outlive parameters bound to it.
     parameters: PhantomData<&'param [u8]>,
     handle: HStmt<'con>,
@@ -29,18 +30,28 @@ pub enum Opened {}
 /// `CREATE TABLE` statement.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
-pub enum NoResult {}
+pub enum NoCursor {}
 /// Cursor state of `Statement`. A statement will enter this state after a successful call to
 /// `fetch()`
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
 pub enum Positioned {}
+/// State used by `Statement`. A statement will enter this state after a successful call to
+/// `prepare()`.
+#[derive(Debug)]
+#[allow(missing_copy_implementations)]
+pub enum Prepared {}
+/// State used by `Statement`. Indicates that no Access Plan has been created, yet.
+#[derive(Debug)]
+#[allow(missing_copy_implementations)]
+pub enum Unprepared {}
+
 
 pub trait CursorState {}
 impl CursorState for Opened {}
 impl CursorState for Positioned {}
 
-impl<'con, 'param, S> Statement<'con, 'param, S> {
+impl<'con, 'param, S, A> Statement<'con, 'param, S, A> {
     /// Provides access to the raw ODBC Statement Handle
     pub fn as_raw(&self) -> SQLHSTMT {
         self.handle.as_raw()
@@ -66,7 +77,7 @@ impl<'con, 'param, S> Statement<'con, 'param, S> {
         parameter_number: SQLUSMALLINT,
         parameter_type: DataType,
         value: Option<&'p T>,
-    ) -> Return<Statement<'con, 'p, S>, Statement<'con, 'param, S>>
+    ) -> Return<Statement<'con, 'p, S, A>, Statement<'con, 'param, S, A>>
     where
         T: CDataType + ?Sized,
         'param: 'p,
@@ -85,21 +96,22 @@ impl<'con, 'param, S> Statement<'con, 'param, S> {
     }
 
     /// Unbinds the parameters from the parameter markers
-    pub fn reset_parameters(mut self) -> Statement<'con, 'static, S> {
+    pub fn reset_parameters(mut self) -> Statement<'con, 'static, S, A> {
         self.handle.reset_parameters().unwrap();
         self.transit()
     }
 
-    fn transit<'p, S2>(self) -> Statement<'con, 'p, S2> {
+    fn transit<'p, S2, A2>(self) -> Statement<'con, 'p, S2, A2> {
         Statement {
             handle: self.handle,
             parameters: PhantomData,
-            state: PhantomData,
+            cursor: PhantomData,
+            access_plan: PhantomData,
         }
     }
 }
 
-impl<'con, 'param, C> Statement<'con, 'param, C>
+impl<'con, 'param, C, A> Statement<'con, 'param, C, A>
 where
     C: CursorState,
 {
@@ -119,7 +131,7 @@ where
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/fetching-a-row-of-data
     pub fn fetch(
         mut self,
-    ) -> ReturnOption<Statement<'con, 'param, Positioned>, Statement<'con, 'param, NoResult>> {
+    ) -> ReturnOption<Statement<'con, 'param, Positioned, A>, Statement<'con, 'param, NoCursor, A>> {
         match self.handle.fetch() {
             ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
             ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
@@ -137,7 +149,7 @@ where
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/closing-the-cursor
     pub fn close_cursor(
         mut self,
-    ) -> Return<Statement<'con, 'param, NoResult>, Statement<'con, 'param, C>> {
+    ) -> Return<Statement<'con, 'param, NoCursor>, Statement<'con, 'param, C, A>> {
         match self.handle.close_cursor() {
             Success(()) => Success(self.transit()),
             Info(()) => Info(self.transit()),
@@ -146,16 +158,41 @@ where
     }
 }
 
-impl<'con, 'param> Statement<'con, 'param, NoResult> {
+impl<'con, 'param> Statement<'con, 'param, NoCursor, Unprepared> {
     /// Allocates a new `Statement`
     pub fn with_parent(parent: &'con Connection<Connected>) -> Return<Self> {
         HStmt::allocate(parent.as_hdbc()).map(|handle| {
             Statement {
                 handle,
                 parameters: PhantomData,
-                state: PhantomData,
+                cursor: PhantomData,
+                access_plan: PhantomData,
             }
         })
+    }
+
+    /// Prepares a `Statement` for execution by creating an Access Plan.
+    ///
+    /// See [SQLPrepare Function][1]
+    /// See [Prepare and Execute a Statement (ODBC)][2]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlprepare-function
+    /// [2]: https://docs.microsoft.com/sql/relational-databases/native-client-odbc-how-to/execute-queries/prepare-and-execute-a-statement-odbc
+    pub fn prepare<T>(
+        mut self,
+        statement_text: &T,
+    ) -> Return<Statement<'con, 'param, NoCursor, Prepared>, Statement<'con, 'param, NoCursor>>
+    where
+        T: SqlStr + ?Sized,
+    {
+        // According to the state transition table preparing statements which are already prepared
+        // is possible. However we would need to check the status code in order to decide which
+        // state the `Statement` is in the case of an error. So for now we only support preparing
+        // freshly allocated statements until someone has a use case for 'repreparing' a statement.
+        match self.handle.prepare(statement_text) {
+            Success(()) => Success(self.transit()),
+            Info(()) => Info(self.transit()),
+            Error(()) => Error(self.transit()),
+        }
     }
 
     /// Executes a preparable statement, using the current values of the parametr marker variables.
@@ -167,7 +204,7 @@ impl<'con, 'param> Statement<'con, 'param, NoResult> {
     pub fn exec_direct<T>(
         mut self,
         statement_text: &T,
-    ) -> ReturnOption<Statement<'con, 'param, Opened>, Statement<'con, 'param, NoResult>>
+    ) -> ReturnOption<Statement<'con, 'param, Opened>, Statement<'con, 'param, NoCursor>>
     where
         T: SqlStr + ?Sized,
     {
@@ -180,7 +217,25 @@ impl<'con, 'param> Statement<'con, 'param, NoResult> {
     }
 }
 
-impl<'con, 'param> Statement<'con, 'param, Positioned> {
+impl<'con, 'param> Statement<'con, 'param, NoCursor, Prepared>{
+    /// Executes a prepared statement, using the current values fo the parameter marker variables
+    /// if any parameter markers exist in the statement.
+    ///
+    /// See [SQLExecute Function][1]
+    /// See [Prepared Execution][2]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlexecute-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/prepared-execution-odbc
+    pub fn execute(mut self) -> ReturnOption<Statement<'con, 'param, Opened, Prepared>, Self>{
+        match self.handle.execute(){
+            ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
+            ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
+            ReturnOption::Error(()) => ReturnOption::Error(self.transit()),
+            ReturnOption::NoData(()) => ReturnOption::NoData(self.transit())
+        }
+    }
+}
+
+impl<'con, 'param, A> Statement<'con, 'param, Positioned, A> {
     /// Retrieves data for a single column or output parameter.
     ///
     /// See [SQLGetData][1]

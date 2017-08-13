@@ -19,7 +19,7 @@ pub use return_::{Return, Success, Info, Error};
 pub use return_option::ReturnOption;
 pub use environment::Environment;
 pub use connection::{Connection, Connected, Unconnected};
-pub use statement::{Statement, Opened};
+pub use statement::{Statement, NoCursor, Opened, Positioned, Unprepared, Prepared};
 pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use sql_str::SqlStr;
 pub use diagnostics::{Diagnostics, DiagResult, DiagReturn};

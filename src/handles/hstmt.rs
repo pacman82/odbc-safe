@@ -133,9 +133,9 @@ impl<'env, 'param> HStmt<'env> {
         ).into()
     }
 
-    pub fn prepare<T>(&mut self, statement_text: T) -> Return<()>
+    pub fn prepare<T>(&mut self, statement_text: &T) -> Return<()>
     where
-        T: SqlStr,
+        T: SqlStr + ?Sized,
     {
         unsafe {
             SQLPrepare(
@@ -148,5 +148,9 @@ impl<'env, 'param> HStmt<'env> {
 
     pub fn reset_parameters(&mut self) -> Return<()> {
         unsafe { SQLFreeStmt(self.handle, SQL_RESET_PARAMS).into() }
+    }
+
+    pub fn execute(&mut self) -> ReturnOption<()> {
+        unsafe { SQLExecute(self.handle).into() }
     }
 }
