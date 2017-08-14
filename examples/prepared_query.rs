@@ -1,3 +1,4 @@
+//! Prepares an SQL query and executes it once for every parameter in an array
 extern crate odbc_safe;
 use odbc_safe::*;
 use std::str::from_utf8;

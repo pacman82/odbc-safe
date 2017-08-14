@@ -1,3 +1,4 @@
+//! Directly executes an SQL query and prints the result set to standard out
 extern crate odbc_safe;
 use odbc_safe::*;
 use std::str::from_utf8;
