@@ -2,7 +2,7 @@ use super::*;
 use odbc_sys::*;
 use std::marker::PhantomData;
 
-/// A `Connection` is used to query and manipulate a data source.
+/// A `DataSource` is used to query and manipulate a data source.
 ///
 /// * The state of the connection
 /// * The current connection-level diagnostics
@@ -12,22 +12,22 @@ use std::marker::PhantomData;
 /// See [Connection Handles in the ODBC Reference][1]
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/connection-handles
 #[derive(Debug)]
-pub struct Connection<'env, S = Unconnected> {
+pub struct DataSource<'env, S = Unconnected> {
     state: PhantomData<S>,
     handle: HDbc<'env>,
 }
 
-/// Indicates that a `Connection` is allocated, but not connected to a Data Source.
+/// Indicates that a `DataSource` is allocated, but not connected to a Data Source.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
 pub enum Unconnected {}
-/// Indicates that a `Connection` is connected to a Data Source.
+/// Indicates that a `DataSource` is connected to a Data Source.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
 pub enum Connected {}
 
-impl<'env, Any> Connection<'env, Any> {
-    /// Consumes the `Connection`, returning the wrapped raw `SQLHDBC`
+impl<'env, Any> DataSource<'env, Any> {
+    /// Consumes the `DataSource`, returning the wrapped raw `SQLHDBC`
     ///
     /// Leaks the Connection Handle. This is usually done in order to pass ownership from Rust to
     /// another language. After calling this method, the caller is responsible for invoking
@@ -45,23 +45,23 @@ impl<'env, Any> Connection<'env, Any> {
     /// `SQLAllocHandle`. Special care must be taken that the Connection Handle passed is in a
     /// State which matches the type.
     pub unsafe fn from_raw(raw: SQLHDBC) -> Self {
-        Connection {
+        DataSource {
             handle: HDbc::from_raw(raw),
             state: PhantomData,
         }
     }
 
     /// Express state transiton
-    fn transit<Other>(self) -> Connection<'env, Other> {
-        Connection {
+    fn transit<Other>(self) -> DataSource<'env, Other> {
+        DataSource {
             state: PhantomData,
             handle: self.handle,
         }
     }
 }
 
-impl<'env> Connection<'env, Unconnected> {
-    /// Allocates a new `Connection`. A `Connection` may not outlive its parent `Environment`.
+impl<'env> DataSource<'env, Unconnected> {
+    /// Allocates a new `DataSource`. A `DataSource` may not outlive its parent `Environment`.
     ///
     /// See [Allocating a Connection Handle ODBC][1]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/allocating-a-connection-handle-odbc
@@ -70,7 +70,7 @@ impl<'env> Connection<'env, Unconnected> {
         V: Version,
     {
         HDbc::allocate(parent.as_henv()).map(|handle| {
-            Connection {
+            DataSource {
                 state: PhantomData,
                 handle: handle,
             }
@@ -102,7 +102,7 @@ impl<'env> Connection<'env, Unconnected> {
         data_source_name: &DSN,
         user: &U,
         pwd: &P,
-    ) -> Return<Connection<'env, Connected>, Connection<'env, Unconnected>>
+    ) -> Return<DataSource<'env, Connected>, DataSource<'env, Unconnected>>
     where
         DSN: SqlStr + ?Sized,
         U: SqlStr + ?Sized,
@@ -116,7 +116,7 @@ impl<'env> Connection<'env, Unconnected> {
     }
 }
 
-impl<'env> Connection<'env, Connected> {
+impl<'env> DataSource<'env, Connected> {
     /// Used by `Statement`s constructor
     pub(crate) fn as_hdbc(&self) -> &HDbc {
         &self.handle
@@ -131,7 +131,7 @@ impl<'env> Connection<'env, Connected> {
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldisconnect-function
     pub fn disconnect(
         mut self,
-    ) -> Return<Connection<'env, Unconnected>, Connection<'env, Connected>> {
+    ) -> Return<DataSource<'env, Unconnected>, DataSource<'env, Connected>> {
         match self.handle.disconnect() {
             Success(()) => Success(self.transit()),
             Info(()) => Info(self.transit()),
@@ -140,7 +140,7 @@ impl<'env> Connection<'env, Connected> {
     }
 }
 
-impl<'env, S> Diagnostics for Connection<'env, S> {
+impl<'env, S> Diagnostics for DataSource<'env, S> {
     fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> ReturnOption<DiagResult> {
         self.handle.diagnostics(rec_number, message_text)
     }
