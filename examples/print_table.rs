@@ -39,15 +39,15 @@ fn run(env: &Environment<Odbc3>) -> MyResult<()> {
     conn.disconnect().success().map(|_| ())
 }
 
-fn connect<V>(env: &Environment<V>) -> Connection<Connected>
+fn connect<V>(env: &Environment<V>) -> Connection
 where
     V: Version,
 {
-    let conn = Connection::with_parent(env).unwrap();
+    let conn = DataSource::with_parent(env).unwrap();
     conn.connect("TestDataSource", "", "").unwrap()
 }
 
-fn execute_query<'a, 'b>(conn: &'a Connection<Connected>) -> MyResult<Statement<'a, 'b, Opened>> {
+fn execute_query<'a, 'b>(conn: &'a Connection) -> MyResult<Statement<'a, 'b, Opened>> {
     let stmt = Statement::with_parent(conn).unwrap();
     match stmt.exec_direct("SELECT * FROM MOVIES") {
         ReturnOption::Success(s) | ReturnOption::Info(s) => Ok(s),

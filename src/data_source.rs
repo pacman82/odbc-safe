@@ -26,6 +26,9 @@ pub enum Unconnected {}
 #[allow(missing_copy_implementations)]
 pub enum Connected {}
 
+/// `Connection` can be used as a shorthand for a `DataSource` in `Connected` state
+pub type Connection<'env> = DataSource<'env, Connected>;
+
 impl<'env, Any> DataSource<'env, Any> {
     /// Consumes the `DataSource`, returning the wrapped raw `SQLHDBC`
     ///

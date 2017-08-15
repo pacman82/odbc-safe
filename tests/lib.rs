@@ -12,7 +12,7 @@ fn allocate_environment() {
 fn allocate_connection() {
     let env = Environment::new().unwrap();
     let env: Environment<Odbc3> = env.declare_version().unwrap();
-    Connection::with_parent(&env).unwrap();
+    DataSource::with_parent(&env).unwrap();
 }
 
 #[test]
@@ -20,7 +20,7 @@ fn allocate_connection() {
 fn wrong_datasource() {
     let env = Environment::new().unwrap();
     let env: Environment<Odbc3> = env.declare_version().unwrap();
-    let dbc = Connection::with_parent(&env).unwrap();
+    let dbc = DataSource::with_parent(&env).unwrap();
     dbc.connect("DoesntExist", "", "").unwrap();
 }
 
@@ -39,7 +39,7 @@ fn diagnostics() {
     let env = Environment::new().unwrap();
     let env: Environment<Odbc3> = env.declare_version().unwrap();
 
-    let dbc = Connection::with_parent(&env).unwrap();
+    let dbc = DataSource::with_parent(&env).unwrap();
     let dbc = dbc.connect("DoesntExist", "", "");
     if let Error(d) = dbc {
         let mut message = [0; 512];
@@ -58,7 +58,7 @@ fn diagnostics() {
 fn connect_to_postgres() {
     let env = Environment::new().unwrap();
     let env: Environment<Odbc3> = env.declare_version().unwrap();
-    let dbc = Connection::with_parent(&env).unwrap();
+    let dbc = DataSource::with_parent(&env).unwrap();
     let dbc = dbc.connect("PostgreSQL", "postgres", "");
     match dbc {
         Success(c) => assert_no_diagnostic(&c.disconnect()),
@@ -72,7 +72,7 @@ fn connect_to_postgres() {
 fn query_result() {
     let env = Environment::new().unwrap();
     let env: Environment<Odbc3> = env.declare_version().unwrap();
-    let dbc = Connection::with_parent(&env).unwrap();
+    let dbc = DataSource::with_parent(&env).unwrap();
     let dbc = dbc.connect("PostgreSQL", "postgres", "").unwrap();
     {
         let stmt = Statement::with_parent(&dbc).unwrap();

@@ -19,15 +19,15 @@ fn main() {
     conn.disconnect().unwrap();
 }
 
-fn connect<V>(env: &Environment<V>) -> Connection<Connected>
+fn connect<V>(env: &Environment<V>) -> Connection
 where
     V: Version,
 {
-    let conn = Connection::with_parent(env).unwrap();
+    let conn = DataSource::with_parent(env).unwrap();
     conn.connect("TestDataSource", "", "").unwrap()
 }
 
-fn prepare_query<'a, 'b>(conn: &'a Connection<Connected>) -> Statement<'a, 'b, NoCursor, Prepared> {
+fn prepare_query<'a, 'b>(conn: &'a Connection) -> Statement<'a, 'b, NoCursor, Prepared> {
     let stmt = Statement::with_parent(conn).unwrap();
     stmt.prepare("SELECT TITLE FROM MOVIES WHERE YEAR = ?")
         .unwrap()
