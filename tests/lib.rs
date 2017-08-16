@@ -109,7 +109,7 @@ fn auto_disconnect() {
     let env = Environment::new().unwrap();
     let env: Environment<Odbc3> = env.declare_version().unwrap();
     let dbc = DataSource::with_parent(&env).unwrap();
-    let dbc = dbc.connect("PostgreSQL", "postgres", "").unwrap();
+    dbc.connect("PostgreSQL", "postgres", "").unwrap();
     // No panic on Drop, because of automatic disconnect
 }
 
