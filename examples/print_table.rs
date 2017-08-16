@@ -1,8 +1,11 @@
 //! Directly executes an SQL query and prints the result set to standard out
+//!
+//! This example also offers an idea, how to set up error handling for your ODBC Application.
 extern crate odbc_safe;
 use odbc_safe::*;
 use std::str::from_utf8;
 
+// Setup error handling
 struct LastError(String);
 type MyResult<T> = Result<T, LastError>;
 
@@ -21,6 +24,23 @@ impl<D: Diagnostics> From<D> for LastError {
     }
 }
 
+trait ExtReturn<T> {
+    fn into_result(self) -> MyResult<T>;
+}
+
+impl<T, D> ExtReturn<T> for Return<T, D>
+where
+    D: Diagnostics,
+{
+    fn into_result(self) -> MyResult<T> {
+        match self {
+            Success(v) | Info(v) => Ok(v),
+            Error(d) => Err(d.into()),
+        }
+    }
+}
+
+// Actual application
 fn main() {
 
     let env = Environment::new().unwrap();
@@ -34,17 +54,17 @@ fn main() {
 
 fn run(env: &Environment<Odbc3>) -> MyResult<()> {
 
-    let conn = connect(&env);
-    print_fields(execute_query(&conn)?)?;
-    conn.disconnect().success().map(|_| ())
+    let conn = connect(&env)?;
+    let result_set = execute_query(&conn)?;
+    print_fields(result_set)
 }
 
-fn connect<V>(env: &Environment<V>) -> Connection
+fn connect<V>(env: &Environment<V>) -> MyResult<Connection>
 where
     V: Version,
 {
     let conn = DataSource::with_parent(env).unwrap();
-    conn.connect("TestDataSource", "", "").unwrap()
+    conn.connect("TestDataSource", "", "").into_result()
 }
 
 fn execute_query<'a, 'b>(conn: &'a Connection) -> MyResult<Statement<'a, 'b, Opened>> {
