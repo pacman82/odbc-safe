@@ -1,13 +1,10 @@
-//! Directly executes an SQL query and prints the result set to standard out
-//!
-//! This example also offers an idea, how to set up error handling for your ODBC Application.
+//! Prints all datasources to the standard out.
 extern crate odbc_safe;
 extern crate odbc_sys;
 use odbc_safe::*;
 use odbc_sys::*;
 use std::str::from_utf8;
 
-// Actual application
 fn main() {
 
     let env = Environment::new().unwrap();
