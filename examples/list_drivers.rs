@@ -10,14 +10,14 @@ fn main() {
     let env = Environment::new().unwrap();
     let mut env = env.declare_version_3().unwrap();
 
-    let mut server_name = [0; 512];
     let mut description = [0; 512];
+    let mut attributes = [0; 512];
 
-    println!("ODBC Data Sources:");
+    println!("ODBC Drivers:");
 
     loop {
-        let (name_length, description_length) =
-            match env.data_sources(SQL_FETCH_NEXT, &mut server_name, &mut description) {
+        let (description_length, attributes_length) =
+            match env.drivers(SQL_FETCH_NEXT, &mut description, &mut attributes) {
                 ReturnOption::Success(v) => v,
                 ReturnOption::Info(_) => panic!("Buffers not large enough. Truncation occurred."),
                 ReturnOption::NoData(()) => break,
@@ -27,9 +27,9 @@ fn main() {
             };
 
         println!(
-            "\tName: {}\n\tDescription: {}\n",
-            from_utf8(&server_name[..(name_length as usize)]).unwrap(),
-            from_utf8(&description[..(description_length as usize)]).unwrap()
+            "\tDescription: {}\n\tAttributes: {}\n",
+            from_utf8(&description[..(description_length as usize)]).unwrap(),
+            from_utf8(&attributes[..(attributes_length as usize)]).unwrap()
         );
     }
 }

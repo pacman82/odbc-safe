@@ -22,11 +22,9 @@ impl Drop for HEnv {
         unsafe {
             match SQLFreeHandle(SQL_HANDLE_ENV, self.handle as SQLHANDLE) {
                 SQL_SUCCESS => (),
-                other => {
-                    if !panicking() {
-                        panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
-                    }
-                }
+                other => if !panicking() {
+                    panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
+                },
             }
         }
     }
@@ -78,6 +76,30 @@ impl HEnv {
                 &mut description_length,
             ).into();
             ret.map(|()|(name_length, description_length))
+        }
+    }
+
+    /// Fills buffers and returns `(description_length, attributes_length)`
+    pub fn drivers(
+        &mut self,
+        direction: FetchOrientation,
+        description: &mut [u8],
+        attributes: &mut [u8],
+    ) -> ReturnOption<(SQLSMALLINT, SQLSMALLINT)> {
+        unsafe {
+            let mut description_length = 0;
+            let mut attributes_length = 0;
+            let ret: ReturnOption<()> = SQLDrivers(
+                self.handle,
+                direction,
+                description.as_mut_ptr(),
+                description.len().to_buf_len(),
+                &mut description_length,
+                attributes.as_mut_ptr(),
+                attributes.len().to_buf_len(),
+                &mut attributes_length,
+            ).into();
+            ret.map(|()|(description_length, attributes_length))
         }
     }
 

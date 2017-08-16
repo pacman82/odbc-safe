@@ -23,6 +23,7 @@ before_script:
 script:
   - cargo build --release
   - cargo run --release --example list_datasources
+  - cargo run --release --example list_drivers
   - cargo test --verbose --release --features travis
   - cargo doc --no-deps
 env:

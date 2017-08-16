@@ -42,7 +42,14 @@ impl<V: Version> Environment<V> {
         &self.handle
     }
 
-    /// Returns information about a data source.
+    /// Fills buffers with information about the available datasources
+    ///
+    /// A 32 / 64 Bit Application will only return information about either 32 or 64 Bit
+    /// DataSources.
+    ///
+    /// # Returns
+    ///
+    /// (server_name_length, description_length)
     ///
     /// See [SQLDataSources][1]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldatasources-function
@@ -52,11 +59,28 @@ impl<V: Version> Environment<V> {
         server_name: &mut [u8],
         description: &mut [u8],
     ) -> ReturnOption<(SQLSMALLINT, SQLSMALLINT)> {
-        self.handle.data_sources(
-            direction,
-            server_name,
-            description,
-        )
+        self.handle
+            .data_sources(direction, server_name, description)
+    }
+
+    /// Fills buffers with information about the available datasources
+    ///
+    /// A 32 / 64 Bit Application will only return information about either 32 or 64 Bit
+    /// DataSources.
+    ///
+    /// # Returns
+    ///
+    /// (description_length, attributes_length)
+    ///
+    /// See [SQLDrivers][1]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldrivers-function
+    pub fn drivers(
+        &mut self,
+        direction: FetchOrientation,
+        description: &mut [u8],
+        attributes: &mut [u8],
+    ) -> ReturnOption<(SQLSMALLINT, SQLSMALLINT)> {
+        self.handle.drivers(direction, description, attributes)
     }
 }
 
