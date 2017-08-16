@@ -15,19 +15,20 @@
 
 extern crate odbc_sys;
 
+pub use c_data_type::CDataType;
+pub use data_source::{DataSource, Unconnected, Connection, Connected};
+pub use data_type::DataType;
+pub use diagnostics::{Diagnostics, DiagResult};
+pub use environment::Environment;
+use handles::{Handle, HEnv, HDbc, HStmt};
+pub use indicator::Indicator;
 pub use return_::{Return, Success, Info, Error};
 pub use return_option::ReturnOption;
-pub use environment::Environment;
-pub use data_source::{DataSource, Unconnected, Connection, Connected};
-pub use statement::{Statement, NoCursor, Opened, Positioned, Unprepared, Prepared};
-pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use sql_str::SqlStr;
-pub use diagnostics::{Diagnostics, DiagResult};
-pub use c_data_type::CDataType;
-pub use data_type::DataType;
-pub use indicator::Indicator;
+pub use statement::{Statement, NoCursor, Opened, Positioned, Unprepared, Prepared};
+use to_buffer_length_ext::ToBufferLengthExt;
+pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use version::Version;
-use handles::{Handle, HEnv, HDbc, HStmt};
 
 mod version;
 mod return_;
@@ -41,3 +42,4 @@ mod statement;
 mod c_data_type;
 mod indicator;
 mod data_type;
+mod to_buffer_length_ext;

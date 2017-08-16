@@ -41,6 +41,23 @@ impl<V: Version> Environment<V> {
     pub(crate) fn as_henv(&self) -> &HEnv {
         &self.handle
     }
+
+    /// Returns information about a data source.
+    ///
+    /// See [SQLDataSources][1]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldatasources-function
+    pub fn data_sources(
+        &mut self,
+        direction: FetchOrientation,
+        server_name: &mut [u8],
+        description: &mut [u8],
+    ) -> ReturnOption<(SQLSMALLINT, SQLSMALLINT)> {
+        self.handle.data_sources(
+            direction,
+            server_name,
+            description,
+        )
+    }
 }
 
 impl Environment<NoVersion> {

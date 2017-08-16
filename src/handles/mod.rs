@@ -12,11 +12,11 @@
 //! or Connection. It therefore more sensible to mangage allocating and freeing handles within
 //! those instances will live just as long as the actual datastructures managed by ODBC.
 
-pub use self::henv::HEnv;
 pub use self::hdbc::HDbc;
+pub use self::henv::HEnv;
 pub use self::hstmt::HStmt;
-use super::*;
-use odbc_sys::*;
+use super::{CDataType, DataType, Indicator, Return, ReturnOption, SqlStr, ToBufferLengthExt};
+use odbc_sys::{HandleType, SQLHANDLE};
 
 mod henv;
 mod hdbc;

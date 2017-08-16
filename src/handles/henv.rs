@@ -1,4 +1,5 @@
-use super::*;
+use super::{Handle, Return, ReturnOption, ToBufferLengthExt};
+use odbc_sys::*;
 use std::ptr::null_mut;
 use std::thread::panicking;
 
@@ -54,6 +55,30 @@ impl HEnv {
 
     pub fn declare_version(&mut self, version: OdbcVersion) -> Return<()> {
         unsafe { SQLSetEnvAttr(self.handle, SQL_ATTR_ODBC_VERSION, version.into(), 0).into() }
+    }
+
+    /// Fills buffers and returns `(name_length, description_length)`
+    pub fn data_sources(
+        &mut self,
+        direction: FetchOrientation,
+        server_name: &mut [u8],
+        description: &mut [u8],
+    ) -> ReturnOption<(SQLSMALLINT, SQLSMALLINT)> {
+        unsafe {
+            let mut name_length = 0;
+            let mut description_length = 0;
+            let ret: ReturnOption<()> = SQLDataSources(
+                self.handle,
+                direction,
+                server_name.as_mut_ptr(),
+                server_name.len().to_buf_len(),
+                &mut name_length,
+                description.as_mut_ptr(),
+                description.len().to_buf_len(),
+                &mut description_length,
+            ).into();
+            ret.map(|()|(name_length, description_length))
+        }
     }
 
     /// Provides access to the raw ODBC environment handle.

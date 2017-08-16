@@ -217,7 +217,7 @@ impl<'con, 'param> Statement<'con, 'param, NoCursor, Unprepared> {
     }
 }
 
-impl<'con, 'param> Statement<'con, 'param, NoCursor, Prepared>{
+impl<'con, 'param> Statement<'con, 'param, NoCursor, Prepared> {
     /// Executes a prepared statement, using the current values fo the parameter marker variables
     /// if any parameter markers exist in the statement.
     ///
@@ -225,12 +225,12 @@ impl<'con, 'param> Statement<'con, 'param, NoCursor, Prepared>{
     /// See [Prepared Execution][2]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlexecute-function
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/prepared-execution-odbc
-    pub fn execute(mut self) -> ReturnOption<Statement<'con, 'param, Opened, Prepared>, Self>{
-        match self.handle.execute(){
+    pub fn execute(mut self) -> ReturnOption<Statement<'con, 'param, Opened, Prepared>, Self> {
+        match self.handle.execute() {
             ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
             ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
             ReturnOption::Error(()) => ReturnOption::Error(self.transit()),
-            ReturnOption::NoData(()) => ReturnOption::NoData(self.transit())
+            ReturnOption::NoData(()) => ReturnOption::NoData(self.transit()),
         }
     }
 }
@@ -253,7 +253,11 @@ impl<'con, 'param, A> Statement<'con, 'param, Positioned, A> {
 }
 
 impl<'con, 'param, C> Diagnostics for Statement<'con, 'param, C> {
-    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> ReturnOption<DiagResult> {
+    fn diagnostics(
+        &self,
+        rec_number: SQLSMALLINT,
+        message_text: &mut [SQLCHAR],
+    ) -> ReturnOption<DiagResult> {
         self.handle.diagnostics(rec_number, message_text)
     }
 }

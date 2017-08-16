@@ -1,7 +1,7 @@
+use super::*;
 use odbc_sys::*;
-use std::os::raw::c_void;
-use std::cmp::min;
 use std::mem::size_of;
+use std::os::raw::c_void;
 
 /// See [C Data Types in ODBC][1]
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/c-data-types-in-odbc
@@ -30,7 +30,7 @@ unsafe impl CDataType for [SQLCHAR] {
     }
 
     fn buffer_len(&self) -> SQLLEN {
-        min(self.len() as SQLLEN, SQLLEN::max_value())
+        self.len().to_buf_len()
     }
 }
 

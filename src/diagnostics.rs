@@ -64,11 +64,19 @@ pub trait Diagnostics {
     ///              for the specified Handle. The function also returns `NoData` for any positive
     ///              `rec_number` if there are no diagnostic records available.
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/diagnostic-messages
-    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> ReturnOption<DiagResult>;
+    fn diagnostics(
+        &self,
+        rec_number: SQLSMALLINT,
+        message_text: &mut [SQLCHAR],
+    ) -> ReturnOption<DiagResult>;
 }
 
 impl<H: Handle> Diagnostics for H {
-    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> ReturnOption<DiagResult> {
+    fn diagnostics(
+        &self,
+        rec_number: SQLSMALLINT,
+        message_text: &mut [SQLCHAR],
+    ) -> ReturnOption<DiagResult> {
         unsafe {
             let mut text_length = 0;
             let mut state = [0; 6];
@@ -104,7 +112,11 @@ where
     S: Diagnostics,
     E: Diagnostics,
 {
-    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> ReturnOption<DiagResult> {
+    fn diagnostics(
+        &self,
+        rec_number: SQLSMALLINT,
+        message_text: &mut [SQLCHAR],
+    ) -> ReturnOption<DiagResult> {
         match self {
             &Success(ref s) | &Info(ref s) => s.diagnostics(rec_number, message_text),
             &Error(ref e) => e.diagnostics(rec_number, message_text),

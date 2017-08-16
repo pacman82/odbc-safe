@@ -1,8 +1,8 @@
 use super::*;
-use std::thread::panicking;
 use std::mem::forget;
-use std::ptr;
 use std::ops::Deref;
+use std::ptr;
+use std::thread::panicking;
 
 /// An `HDbc` with the additional invariant of being 'connected'.
 #[derive(Debug)]

@@ -1,8 +1,8 @@
+pub use self::connected::Connected;
+pub use self::hdbc_wrapper::HDbcWrapper;
+pub use self::unconnected::Unconnected;
 use super::*;
 use odbc_sys::*;
-pub use self::connected::Connected;
-pub use self::unconnected::Unconnected;
-pub use self::hdbc_wrapper::HDbcWrapper;
 use std::ops::DerefMut;
 
 mod connected;
@@ -19,7 +19,7 @@ mod hdbc_wrapper;
 /// See [Connection Handles in the ODBC Reference][1]
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/connection-handles
 #[derive(Debug)]
-pub struct DataSource<'env, S :HDbcWrapper<'env> = Unconnected<'env>>{
+pub struct DataSource<'env, S: HDbcWrapper<'env> = Unconnected<'env>> {
     /// Connection handle. Either `HDbc` for `Unconnected` or `Connected` for `Connected`.
     handle: S::Handle,
 }
@@ -27,7 +27,10 @@ pub struct DataSource<'env, S :HDbcWrapper<'env> = Unconnected<'env>>{
 /// `Connection` can be used as a shorthand for a `DataSource` in `Connected` state
 pub type Connection<'env> = DataSource<'env, Connected<'env>>;
 
-impl<'env, Any> DataSource<'env, Any> where Any : HDbcWrapper<'env>{
+impl<'env, Any> DataSource<'env, Any>
+where
+    Any: HDbcWrapper<'env>,
+{
     /// Consumes the `DataSource`, returning the wrapped raw `SQLHDBC`
     ///
     /// Leaks the Connection Handle. This is usually done in order to pass ownership from Rust to
@@ -46,16 +49,12 @@ impl<'env, Any> DataSource<'env, Any> where Any : HDbcWrapper<'env>{
     /// `SQLAllocHandle`. Special care must be taken that the Connection Handle passed is in a
     /// State which matches the type.
     pub unsafe fn from_raw(raw: SQLHDBC) -> Self {
-        DataSource {
-            handle: Any::from_hdbc(HDbc::from_raw(raw)),
-        }
+        DataSource { handle: Any::from_hdbc(HDbc::from_raw(raw)) }
     }
 
     /// Express state transiton
     fn transit<Other: HDbcWrapper<'env>>(self) -> DataSource<'env, Other> {
-        DataSource {
-            handle: Other::from_hdbc(self.handle.into_hdbc()),
-        }
+        DataSource { handle: Other::from_hdbc(self.handle.into_hdbc()) }
     }
 }
 
@@ -69,9 +68,7 @@ impl<'env> DataSource<'env, Unconnected<'env>> {
         V: Version,
     {
         HDbc::allocate(parent.as_henv()).map(|handle| {
-            DataSource {
-                handle: Unconnected::from_hdbc(handle),
-            }
+            DataSource { handle: Unconnected::from_hdbc(handle) }
         })
     }
 
@@ -127,9 +124,7 @@ impl<'env> Connection<'env> {
     /// * See [SQLDisconnect Function][2]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/disconnecting-from-a-data-source-or-driver
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldisconnect-function
-    pub fn disconnect(
-        mut self,
-    ) -> Return<DataSource<'env, Unconnected<'env>>, Connection<'env>> {
+    pub fn disconnect(mut self) -> Return<DataSource<'env, Unconnected<'env>>, Connection<'env>> {
         match self.handle.disconnect() {
             Success(()) => Success(self.transit()),
             Info(()) => Info(self.transit()),
@@ -138,8 +133,15 @@ impl<'env> Connection<'env> {
     }
 }
 
-impl<'env, S> Diagnostics for DataSource<'env, S> where S: HDbcWrapper<'env>{
-    fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> ReturnOption<DiagResult> {
+impl<'env, S> Diagnostics for DataSource<'env, S>
+where
+    S: HDbcWrapper<'env>,
+{
+    fn diagnostics(
+        &self,
+        rec_number: SQLSMALLINT,
+        message_text: &mut [SQLCHAR],
+    ) -> ReturnOption<DiagResult> {
         self.handle.diagnostics(rec_number, message_text)
     }
 }

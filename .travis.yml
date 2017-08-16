@@ -22,6 +22,7 @@ before_script:
  - export ODBCINI=${PWD}/travis/odbc.ini
 script:
   - cargo build --release
+  - cargo run --release --example list_datasources
   - cargo test --verbose --release --features travis
   - cargo doc --no-deps
 env:

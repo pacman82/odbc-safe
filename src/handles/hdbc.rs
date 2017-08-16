@@ -1,8 +1,9 @@
 use super::*;
-use std::ptr::null_mut;
+use odbc_sys::*;
 use std::marker::PhantomData;
-use std::thread::panicking;
 use std::mem::forget;
+use std::ptr::null_mut;
+use std::thread::panicking;
 
 #[derive(Debug)]
 pub struct HDbc<'env> {
