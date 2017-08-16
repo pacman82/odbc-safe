@@ -103,6 +103,16 @@ fn query_result() {
     dbc.disconnect().unwrap();
 }
 
+#[cfg_attr(not(feature = "travis"), ignore)]
+#[test]
+fn auto_disconnect() {
+    let env = Environment::new().unwrap();
+    let env: Environment<Odbc3> = env.declare_version().unwrap();
+    let dbc = DataSource::with_parent(&env).unwrap();
+    let dbc = dbc.connect("PostgreSQL", "postgres", "").unwrap();
+    // No panic on Drop, because of automatic disconnect
+}
+
 /// Checks for a diagnstic record. Should one be present this function panics printing the contents
 /// of said record.
 fn assert_no_diagnostic(diag: &Diagnostics) {

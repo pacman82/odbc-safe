@@ -8,15 +8,12 @@ fn main() {
     let env = Environment::new().unwrap();
     let env = env.declare_version_3().unwrap();
     let conn = connect(&env);
-    {
-        let mut stmt = prepare_query(&conn);
-        for &year in [1968, 1993].iter() {
-            let result_set = execute_query(stmt, year);
-            stmt = print_fields(result_set);
-            println!("");
-        }
+    let mut stmt = prepare_query(&conn);
+    for &year in [1968, 1993].iter() {
+        let result_set = execute_query(stmt, year);
+        stmt = print_fields(result_set);
+        println!("");
     }
-    conn.disconnect().unwrap();
 }
 
 fn connect<V>(env: &Environment<V>) -> Connection

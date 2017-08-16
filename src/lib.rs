@@ -27,7 +27,7 @@ pub use c_data_type::CDataType;
 pub use data_type::DataType;
 pub use indicator::Indicator;
 pub use version::Version;
-use handles::{Handle, HEnv, HDbc, HStmt};
+use handles::{Handle, HEnv, HDbc, HStmt, Disconnector};
 
 mod version;
 mod return_;

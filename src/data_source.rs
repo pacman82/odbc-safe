@@ -1,6 +1,5 @@
 use super::*;
 use odbc_sys::*;
-use std::marker::PhantomData;
 
 /// A `DataSource` is used to query and manipulate a data source.
 ///
@@ -12,15 +11,16 @@ use std::marker::PhantomData;
 /// See [Connection Handles in the ODBC Reference][1]
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/connection-handles
 #[derive(Debug)]
-pub struct DataSource<'env, S = Unconnected> {
-    state: PhantomData<S>,
-    handle: HDbc<'env>,
+pub struct DataSource<'env, S :DataSourceState<'env> = Unconnected>{
+    /// Connection handle. Either `HDbc` for `Unconnected` or `Disconnector` for `Connected`.
+    handle: S::Handle,
 }
 
 /// Indicates that a `DataSource` is allocated, but not connected to a Data Source.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
 pub enum Unconnected {}
+
 /// Indicates that a `DataSource` is connected to a Data Source.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
@@ -29,19 +29,67 @@ pub enum Connected {}
 /// `Connection` can be used as a shorthand for a `DataSource` in `Connected` state
 pub type Connection<'env> = DataSource<'env, Connected>;
 
-impl<'env, Any> DataSource<'env, Any> {
+pub trait DataSourceState<'env>{
+    type Handle;
+    fn as_hdbc(handle: &Self::Handle) -> &HDbc;
+    unsafe fn from_raw(raw: SQLHDBC) -> Self::Handle;
+    fn into_hdbc(handle: Self::Handle) -> HDbc<'env>;
+    fn from_hdbc(handle: HDbc<'env>) -> Self::Handle;
+}
+
+impl<'env> DataSourceState<'env> for Connected
+{
+    type Handle = Disconnector<'env>;
+    fn as_hdbc(&Disconnector(ref hdbc): &Self::Handle) -> &HDbc{
+        hdbc
+    }
+
+    unsafe fn from_raw(raw: SQLHDBC) -> Self::Handle{
+        Disconnector(HDbc::from_raw(raw))
+    }
+
+    fn into_hdbc(handle: Self::Handle) -> HDbc<'env>{
+        handle.into_hdbc()
+    }
+
+    fn from_hdbc(hdbc: HDbc<'env>) -> Self::Handle{
+        Disconnector(hdbc)
+    }
+}
+
+impl<'env> DataSourceState<'env> for Unconnected
+{
+    type Handle = HDbc<'env>;
+    fn as_hdbc(hdbc: &Self::Handle) -> &HDbc{
+        hdbc
+    }
+
+    unsafe fn from_raw(raw: SQLHDBC) -> Self::Handle{
+        HDbc::from_raw(raw)
+    }
+
+    fn into_hdbc(handle: HDbc) -> HDbc{
+        handle
+    }
+
+    fn from_hdbc(hdbc: HDbc) -> HDbc{
+        hdbc
+    }
+}
+
+impl<'env, Any> DataSource<'env, Any> where Any : DataSourceState<'env>{
     /// Consumes the `DataSource`, returning the wrapped raw `SQLHDBC`
     ///
     /// Leaks the Connection Handle. This is usually done in order to pass ownership from Rust to
     /// another language. After calling this method, the caller is responsible for invoking
     /// `SQLFreeHandle`.
     pub fn into_raw(self) -> SQLHDBC {
-        self.handle.into_raw()
+        Any::into_hdbc(self.handle).into_raw()
     }
 
     /// Provides access to the raw ODBC Connection Handle
     pub fn as_raw(&self) -> SQLHDBC {
-        self.handle.as_raw()
+        Any::as_hdbc(&self.handle).as_raw()
     }
 
     /// May only be invoked with a valid Statement Handle which has been allocated using
@@ -49,16 +97,14 @@ impl<'env, Any> DataSource<'env, Any> {
     /// State which matches the type.
     pub unsafe fn from_raw(raw: SQLHDBC) -> Self {
         DataSource {
-            handle: HDbc::from_raw(raw),
-            state: PhantomData,
+            handle: Any::from_raw(raw),
         }
     }
 
     /// Express state transiton
-    fn transit<Other>(self) -> DataSource<'env, Other> {
+    fn transit<Other: DataSourceState<'env>>(self) -> DataSource<'env, Other> {
         DataSource {
-            state: PhantomData,
-            handle: self.handle,
+            handle: Other::from_hdbc(Any::into_hdbc(self.handle)),
         }
     }
 }
@@ -74,7 +120,6 @@ impl<'env> DataSource<'env, Unconnected> {
     {
         HDbc::allocate(parent.as_henv()).map(|handle| {
             DataSource {
-                state: PhantomData,
                 handle: handle,
             }
         })
@@ -105,7 +150,7 @@ impl<'env> DataSource<'env, Unconnected> {
         data_source_name: &DSN,
         user: &U,
         pwd: &P,
-    ) -> Return<DataSource<'env, Connected>, DataSource<'env, Unconnected>>
+    ) -> Return<Connection<'env>, DataSource<'env, Unconnected>>
     where
         DSN: SqlStr + ?Sized,
         U: SqlStr + ?Sized,
@@ -119,10 +164,10 @@ impl<'env> DataSource<'env, Unconnected> {
     }
 }
 
-impl<'env> DataSource<'env, Connected> {
+impl<'env> Connection<'env> {
     /// Used by `Statement`s constructor
     pub(crate) fn as_hdbc(&self) -> &HDbc {
-        &self.handle
+        &self.handle.0
     }
 
     /// When an application has finished using a data source, it calls `disconnect`. `disconnect`
@@ -134,8 +179,8 @@ impl<'env> DataSource<'env, Connected> {
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldisconnect-function
     pub fn disconnect(
         mut self,
-    ) -> Return<DataSource<'env, Unconnected>, DataSource<'env, Connected>> {
-        match self.handle.disconnect() {
+    ) -> Return<DataSource<'env, Unconnected>, Connection<'env>> {
+        match self.handle.0.disconnect() {
             Success(()) => Success(self.transit()),
             Info(()) => Info(self.transit()),
             Error(()) => Error(self.transit()),
@@ -143,8 +188,8 @@ impl<'env> DataSource<'env, Connected> {
     }
 }
 
-impl<'env, S> Diagnostics for DataSource<'env, S> {
+impl<'env, S> Diagnostics for DataSource<'env, S> where S: DataSourceState<'env>{
     fn diagnostics(&self, rec_number: SQLSMALLINT, message_text: &mut [SQLCHAR]) -> ReturnOption<DiagResult> {
-        self.handle.diagnostics(rec_number, message_text)
+        S::as_hdbc(&self.handle).diagnostics(rec_number, message_text)
     }
 }
