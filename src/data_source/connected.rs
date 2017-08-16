@@ -5,9 +5,9 @@ use std::ptr;
 
 /// A wrapper around a Connection Handle, which calls `disconnect` on Drop
 #[derive(Debug)]
-pub struct Disconnector<'env>(pub HDbc<'env>);
+pub struct Connected<'env>(pub HDbc<'env>);
 
-impl<'env> Drop for Disconnector<'env> {
+impl<'env> Drop for Connected<'env> {
     fn drop(&mut self) {
         match self.0.disconnect() {
             Success(()) | Info(()) => (),
@@ -18,7 +18,7 @@ impl<'env> Drop for Disconnector<'env> {
     }
 }
 
-impl<'env> Disconnector<'env> {
+impl<'env> Connected<'env> {
     /// Releases inner Connection Handle without calling disconnect.
     pub fn into_hdbc(self) -> HDbc<'env> {
         unsafe {

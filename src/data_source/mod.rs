@@ -1,5 +1,8 @@
 use super::*;
 use odbc_sys::*;
+pub use self::connected::Connected;
+
+mod connected;
 
 /// A `DataSource` is used to query and manipulate a data source.
 ///
@@ -12,7 +15,7 @@ use odbc_sys::*;
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/connection-handles
 #[derive(Debug)]
 pub struct DataSource<'env, S :DataSourceState<'env> = Unconnected>{
-    /// Connection handle. Either `HDbc` for `Unconnected` or `Disconnector` for `Connected`.
+    /// Connection handle. Either `HDbc` for `Unconnected` or `Connected` for `Connected`.
     handle: S::Handle,
 }
 
@@ -21,13 +24,8 @@ pub struct DataSource<'env, S :DataSourceState<'env> = Unconnected>{
 #[allow(missing_copy_implementations)]
 pub enum Unconnected {}
 
-/// Indicates that a `DataSource` is connected to a Data Source.
-#[derive(Debug)]
-#[allow(missing_copy_implementations)]
-pub enum Connected {}
-
 /// `Connection` can be used as a shorthand for a `DataSource` in `Connected` state
-pub type Connection<'env> = DataSource<'env, Connected>;
+pub type Connection<'env> = DataSource<'env, Connected<'env>>;
 
 pub trait DataSourceState<'env>{
     type Handle;
@@ -37,15 +35,15 @@ pub trait DataSourceState<'env>{
     fn from_hdbc(handle: HDbc<'env>) -> Self::Handle;
 }
 
-impl<'env> DataSourceState<'env> for Connected
+impl<'env> DataSourceState<'env> for Connected<'env>
 {
-    type Handle = Disconnector<'env>;
-    fn as_hdbc(&Disconnector(ref hdbc): &Self::Handle) -> &HDbc{
+    type Handle = Connected<'env>;
+    fn as_hdbc(&Connected(ref hdbc): &Self::Handle) -> &HDbc{
         hdbc
     }
 
     unsafe fn from_raw(raw: SQLHDBC) -> Self::Handle{
-        Disconnector(HDbc::from_raw(raw))
+        Connected(HDbc::from_raw(raw))
     }
 
     fn into_hdbc(handle: Self::Handle) -> HDbc<'env>{
@@ -53,7 +51,7 @@ impl<'env> DataSourceState<'env> for Connected
     }
 
     fn from_hdbc(hdbc: HDbc<'env>) -> Self::Handle{
-        Disconnector(hdbc)
+        Connected(hdbc)
     }
 }
 

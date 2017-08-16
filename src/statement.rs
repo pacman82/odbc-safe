@@ -160,7 +160,7 @@ where
 
 impl<'con, 'param> Statement<'con, 'param, NoCursor, Unprepared> {
     /// Allocates a new `Statement`
-    pub fn with_parent(parent: &'con DataSource<Connected>) -> Return<Self> {
+    pub fn with_parent(parent: &'con Connection) -> Return<Self> {
         HStmt::allocate(parent.as_hdbc()).map(|handle| {
             Statement {
                 handle,

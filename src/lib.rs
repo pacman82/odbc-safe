@@ -18,7 +18,7 @@ extern crate odbc_sys;
 pub use return_::{Return, Success, Info, Error};
 pub use return_option::ReturnOption;
 pub use environment::Environment;
-pub use data_source::{DataSource, Connected, Unconnected, Connection};
+pub use data_source::{DataSource, Unconnected, Connection, Connected};
 pub use statement::{Statement, NoCursor, Opened, Positioned, Unprepared, Prepared};
 pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use sql_str::SqlStr;
@@ -27,7 +27,7 @@ pub use c_data_type::CDataType;
 pub use data_type::DataType;
 pub use indicator::Indicator;
 pub use version::Version;
-use handles::{Handle, HEnv, HDbc, HStmt, Disconnector};
+use handles::{Handle, HEnv, HDbc, HStmt};
 
 mod version;
 mod return_;
