@@ -1,4 +1,4 @@
-use super::{Handle, Return, ReturnOption, ToBufferLengthExt};
+use super::{Handle, InputBuffer, Return, ReturnOption};
 use odbc_sys::*;
 use std::ptr::null_mut;
 use std::thread::panicking;
@@ -69,10 +69,10 @@ impl HEnv {
                 self.handle,
                 direction,
                 server_name.as_mut_ptr(),
-                server_name.len().to_buf_len(),
+                server_name.buf_len(),
                 &mut name_length,
                 description.as_mut_ptr(),
-                description.len().to_buf_len(),
+                description.buf_len(),
                 &mut description_length,
             ).into();
             ret.map(|()|(name_length, description_length))
@@ -93,10 +93,10 @@ impl HEnv {
                 self.handle,
                 direction,
                 description.as_mut_ptr(),
-                description.len().to_buf_len(),
+                description.buf_len(),
                 &mut description_length,
                 attributes.as_mut_ptr(),
-                attributes.len().to_buf_len(),
+                attributes.buf_len(),
                 &mut attributes_length,
             ).into();
             ret.map(|()|(description_length, attributes_length))

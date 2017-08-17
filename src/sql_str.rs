@@ -1,10 +1,11 @@
 use odbc_sys::*;
 use std::ffi::CStr;
+use std::ptr::null;
 
 /// A type implementing this trait can be passed as a string argument in API calls
 pub unsafe trait SqlStr {
     /// Returns a pointer to the start of the string
-    fn as_ansi_ptr(&self) -> *const SQLCHAR;
+    fn as_text_ptr(&self) -> *const SQLCHAR;
     /// Returns buffer length or SQL_NTS
     fn text_length(&self) -> SQLSMALLINT;
     /// Returns buffer length or SQL_NTSL
@@ -12,7 +13,7 @@ pub unsafe trait SqlStr {
 }
 
 unsafe impl SqlStr for CStr {
-    fn as_ansi_ptr(&self) -> *const SQLCHAR {
+    fn as_text_ptr(&self) -> *const SQLCHAR {
         self.as_ptr() as *const SQLCHAR
     }
 
@@ -27,8 +28,12 @@ unsafe impl SqlStr for CStr {
 
 /// For passing a buffer without terminating NULL
 unsafe impl SqlStr for [u8] {
-    fn as_ansi_ptr(&self) -> *const SQLCHAR {
-        self.as_ptr()
+    fn as_text_ptr(&self) -> *const SQLCHAR {
+        if self.is_empty() {
+            null()
+        } else {
+            self.as_ptr()
+        }
     }
 
     fn text_length(&self) -> SQLSMALLINT {
@@ -56,8 +61,12 @@ unsafe impl SqlStr for [u8] {
 
 /// For passing a buffer without terminating NULL
 unsafe impl SqlStr for str {
-    fn as_ansi_ptr(&self) -> *const SQLCHAR {
-        self.as_ptr()
+    fn as_text_ptr(&self) -> *const SQLCHAR {
+        if self.is_empty() {
+            null()
+        } else {
+            self.as_ptr()
+        }
     }
 
     fn text_length(&self) -> SQLSMALLINT {

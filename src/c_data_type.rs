@@ -2,6 +2,7 @@ use super::*;
 use odbc_sys::*;
 use std::mem::size_of;
 use std::os::raw::c_void;
+use std::ptr::{null, null_mut};
 
 /// See [C Data Types in ODBC][1]
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/c-data-types-in-odbc
@@ -22,15 +23,23 @@ unsafe impl CDataType for [SQLCHAR] {
     }
 
     fn sql_ptr(&self) -> *const c_void {
-        self.as_ptr() as SQLPOINTER
+        if self.len() == 0 {
+            null()
+        } else {
+            self.as_ptr() as SQLPOINTER
+        }
     }
 
     fn mut_sql_ptr(&mut self) -> SQLPOINTER {
-        self.as_mut_ptr() as SQLPOINTER
+        if self.len() == 0 {
+            null_mut()
+        } else {
+            self.as_mut_ptr() as SQLPOINTER
+        }
     }
 
     fn buffer_len(&self) -> SQLLEN {
-        self.len().to_buf_len()
+        self.buf_len()
     }
 }
 
