@@ -53,6 +53,19 @@ fn diagnostics() {
     }
 }
 
+#[test]
+fn drivers_with_empty_buffer() {
+    use odbc_sys::SQL_FETCH_NEXT;
+    let env = Environment::new().unwrap();
+    let mut env: Environment<Odbc3> = env.declare_version().unwrap();
+    let mut description = [0; 0];
+    let mut attributes = [0; 0];
+    match env.drivers(SQL_FETCH_NEXT, &mut description, &mut attributes) {
+        ReturnOption::Error(()) => panic!("SQLDrivers call returned error"),
+        _ => (),
+    }
+}
+
 #[cfg_attr(not(feature = "travis"), ignore)]
 #[test]
 fn connect_to_postgres() {
