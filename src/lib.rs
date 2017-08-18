@@ -22,11 +22,11 @@ pub use diagnostics::{Diagnostics, DiagResult};
 pub use environment::Environment;
 use handles::{Handle, HEnv, HDbc, HStmt};
 pub use indicator::Indicator;
+use output_buffer::OutputBuffer;
 pub use return_::{Return, Success, Info, Error};
 pub use return_option::ReturnOption;
 pub use sql_str::SqlStr;
 pub use statement::{Statement, NoCursor, Opened, Positioned, Unprepared, Prepared};
-use output_buffer::OutputBuffer;
 pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use version::Version;
 
