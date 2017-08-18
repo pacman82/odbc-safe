@@ -11,13 +11,20 @@ use std::marker::PhantomData;
 /// * The current settings of each statement attribute
 ///
 /// See [Statement Handles][1]
+///
+/// Specific to the rust wrapper of an ODBC Statement is, that we do keep track of the lifetimes of
+/// the parent `Connection`, parameters as well as `columns` bound to the `Statement`. Since it is
+/// possible to unbind the parameters and columns we have to keep track of their lifetimes
+/// seperatly.
+///
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/statement-handles
 #[derive(Debug)]
-pub struct Statement<'con, 'param, C = NoCursor, A = Unprepared> {
+pub struct Statement<'con, 'param, 'col, C = NoCursor, A = Unprepared> {
     cursor: PhantomData<C>,
     access_plan: PhantomData<A>,
     /// Statement may not outlive parameters bound to it.
     parameters: PhantomData<&'param [u8]>,
+    columns: PhantomData<&'col [u8]>,
     handle: HStmt<'con>,
 }
 
@@ -51,7 +58,7 @@ pub trait CursorState {}
 impl CursorState for Opened {}
 impl CursorState for Positioned {}
 
-impl<'con, 'param, S, A> Statement<'con, 'param, S, A> {
+impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
     /// Provides access to the raw ODBC Statement Handle
     pub fn as_raw(&self) -> SQLHSTMT {
         self.handle.as_raw()
@@ -77,7 +84,7 @@ impl<'con, 'param, S, A> Statement<'con, 'param, S, A> {
         parameter_number: SQLUSMALLINT,
         parameter_type: DataType,
         value: Option<&'p T>,
-    ) -> Return<Statement<'con, 'p, S, A>, Statement<'con, 'param, S, A>>
+    ) -> Return<Statement<'con, 'p, 'col, S, A>, Statement<'con, 'param, 'col, S, A>>
     where
         T: CDataType + ?Sized,
         'param: 'p,
@@ -96,22 +103,23 @@ impl<'con, 'param, S, A> Statement<'con, 'param, S, A> {
     }
 
     /// Unbinds the parameters from the parameter markers
-    pub fn reset_parameters(mut self) -> Statement<'con, 'static, S, A> {
+    pub fn reset_parameters(mut self) -> Statement<'con, 'static, 'col, S, A> {
         self.handle.reset_parameters().unwrap();
         self.transit()
     }
 
-    fn transit<'p, S2, A2>(self) -> Statement<'con, 'p, S2, A2> {
+    fn transit<'p, S2, A2>(self) -> Statement<'con, 'p, 'col, S2, A2> {
         Statement {
             handle: self.handle,
             parameters: PhantomData,
+            columns: PhantomData,
             cursor: PhantomData,
             access_plan: PhantomData,
         }
     }
 }
 
-impl<'con, 'param, C, A> Statement<'con, 'param, C, A>
+impl<'con, 'param, 'col, C, A> Statement<'con, 'param, 'col, C, A>
 where
     C: CursorState,
 {
@@ -131,7 +139,7 @@ where
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/fetching-a-row-of-data
     pub fn fetch(
         mut self,
-    ) -> ReturnOption<Statement<'con, 'param, Positioned, A>, Statement<'con, 'param, NoCursor, A>> {
+    ) -> ReturnOption<Statement<'con, 'param, 'col, Positioned, A>, Statement<'con, 'param, 'col, NoCursor, A>> {
         match self.handle.fetch() {
             ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
             ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
@@ -149,7 +157,7 @@ where
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/closing-the-cursor
     pub fn close_cursor(
         mut self,
-    ) -> Return<Statement<'con, 'param, NoCursor>, Statement<'con, 'param, C, A>> {
+    ) -> Return<Statement<'con, 'param, 'col, NoCursor>, Statement<'con, 'param, 'col, C, A>> {
         match self.handle.close_cursor() {
             Success(()) => Success(self.transit()),
             Info(()) => Info(self.transit()),
@@ -158,7 +166,7 @@ where
     }
 }
 
-impl<'con, 'param> Statement<'con, 'param, NoCursor, Unprepared> {
+impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
     /// Allocates a new `Statement`
     pub fn with_parent(parent: &'con Connection) -> Return<Self> {
         HStmt::allocate(parent.as_hdbc()).map(|handle| {
@@ -166,6 +174,7 @@ impl<'con, 'param> Statement<'con, 'param, NoCursor, Unprepared> {
                 handle,
                 parameters: PhantomData,
                 cursor: PhantomData,
+                columns: PhantomData,
                 access_plan: PhantomData,
             }
         })
@@ -180,7 +189,7 @@ impl<'con, 'param> Statement<'con, 'param, NoCursor, Unprepared> {
     pub fn prepare<T>(
         mut self,
         statement_text: &T,
-    ) -> Return<Statement<'con, 'param, NoCursor, Prepared>, Statement<'con, 'param, NoCursor>>
+    ) -> Return<Statement<'con, 'param, 'col, NoCursor, Prepared>, Statement<'con, 'param, 'col, NoCursor>>
     where
         T: SqlStr + ?Sized,
     {
@@ -204,7 +213,7 @@ impl<'con, 'param> Statement<'con, 'param, NoCursor, Unprepared> {
     pub fn exec_direct<T>(
         mut self,
         statement_text: &T,
-    ) -> ReturnOption<Statement<'con, 'param, Opened>, Statement<'con, 'param, NoCursor>>
+    ) -> ReturnOption<Statement<'con, 'param, 'col, Opened>, Statement<'con, 'param, 'col, NoCursor>>
     where
         T: SqlStr + ?Sized,
     {
@@ -217,7 +226,7 @@ impl<'con, 'param> Statement<'con, 'param, NoCursor, Unprepared> {
     }
 }
 
-impl<'con, 'param> Statement<'con, 'param, NoCursor, Prepared> {
+impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Prepared> {
     /// Executes a prepared statement, using the current values fo the parameter marker variables
     /// if any parameter markers exist in the statement.
     ///
@@ -225,7 +234,7 @@ impl<'con, 'param> Statement<'con, 'param, NoCursor, Prepared> {
     /// See [Prepared Execution][2]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlexecute-function
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/prepared-execution-odbc
-    pub fn execute(mut self) -> ReturnOption<Statement<'con, 'param, Opened, Prepared>, Self> {
+    pub fn execute(mut self) -> ReturnOption<Statement<'con, 'param, 'col, Opened, Prepared>, Self> {
         match self.handle.execute() {
             ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
             ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
@@ -235,7 +244,7 @@ impl<'con, 'param> Statement<'con, 'param, NoCursor, Prepared> {
     }
 }
 
-impl<'con, 'param, A> Statement<'con, 'param, Positioned, A> {
+impl<'con, 'param, 'col, A> Statement<'con, 'param, 'col, Positioned, A> {
     /// Retrieves data for a single column or output parameter.
     ///
     /// See [SQLGetData][1]
@@ -252,7 +261,7 @@ impl<'con, 'param, A> Statement<'con, 'param, Positioned, A> {
     }
 }
 
-impl<'con, 'param, C> Diagnostics for Statement<'con, 'param, C> {
+impl<'con, 'param, 'col, C> Diagnostics for Statement<'con, 'param, 'col, C> {
     fn diagnostics(
         &self,
         rec_number: SQLSMALLINT,
