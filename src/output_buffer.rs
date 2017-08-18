@@ -1,17 +1,17 @@
 use odbc_sys::*;
 use std::cmp::min;
-use std::ptr::null;
+use std::ptr::null_mut;
 
 /// This trait is intended to extend `usize` with safe downsize casts, so we can pass it as buffer
 /// length into odbc functions.
-pub trait InputBuffer {
+pub trait OutputBuffer {
     fn buf_len<T>(&self) -> T
     where
         T: BufferLength;
-    fn buf_ptr(&self) -> *const u8;
+    fn mut_buf_ptr(&mut self) -> *mut u8;
 }
 
-impl InputBuffer for [u8] {
+impl OutputBuffer for [u8] {
     fn buf_len<T>(&self) -> T
     where
         T: BufferLength,
@@ -19,11 +19,11 @@ impl InputBuffer for [u8] {
         T::from_usize(min(self.len(), T::max_value()))
     }
 
-    fn buf_ptr(&self) -> *const u8 {
+    fn mut_buf_ptr(&mut self) -> *mut u8 {
         if self.len() == 0 {
-            null()
+            null_mut()
         } else {
-            self.as_ptr()
+            self.as_mut_ptr()
         }
     }
 }

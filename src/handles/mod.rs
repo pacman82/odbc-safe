@@ -15,7 +15,7 @@
 pub use self::hdbc::HDbc;
 pub use self::henv::HEnv;
 pub use self::hstmt::HStmt;
-use super::{CDataType, DataType, Indicator, InputBuffer, Return, ReturnOption, SqlStr};
+use super::{CDataType, DataType, Indicator, OutputBuffer, Return, ReturnOption, SqlStr};
 use odbc_sys::{HandleType, SQLHANDLE};
 
 mod henv;

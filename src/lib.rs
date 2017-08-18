@@ -26,7 +26,7 @@ pub use return_::{Return, Success, Info, Error};
 pub use return_option::ReturnOption;
 pub use sql_str::SqlStr;
 pub use statement::{Statement, NoCursor, Opened, Positioned, Unprepared, Prepared};
-use input_buffer::InputBuffer;
+use output_buffer::OutputBuffer;
 pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use version::Version;
 
@@ -42,4 +42,4 @@ mod statement;
 mod c_data_type;
 mod indicator;
 mod data_type;
-mod input_buffer;
+mod output_buffer;

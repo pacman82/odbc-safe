@@ -1,4 +1,4 @@
-use super::{Handle, InputBuffer, Return, ReturnOption};
+use super::{Handle, OutputBuffer, Return, ReturnOption};
 use odbc_sys::*;
 use std::ptr::null_mut;
 use std::thread::panicking;
@@ -68,10 +68,10 @@ impl HEnv {
             let ret: ReturnOption<()> = SQLDataSources(
                 self.handle,
                 direction,
-                server_name.as_mut_ptr(),
+                server_name.mut_buf_ptr(),
                 server_name.buf_len(),
                 &mut name_length,
-                description.as_mut_ptr(),
+                description.mut_buf_ptr(),
                 description.buf_len(),
                 &mut description_length,
             ).into();
@@ -92,10 +92,10 @@ impl HEnv {
             let ret: ReturnOption<()> = SQLDrivers(
                 self.handle,
                 direction,
-                description.as_mut_ptr(),
+                description.mut_buf_ptr(),
                 description.buf_len(),
                 &mut description_length,
-                attributes.as_mut_ptr(),
+                attributes.mut_buf_ptr(),
                 attributes.buf_len(),
                 &mut attributes_length,
             ).into();
