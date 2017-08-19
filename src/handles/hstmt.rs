@@ -17,11 +17,9 @@ impl<'con, 'param> Drop for HStmt<'con> {
         unsafe {
             match SQLFreeHandle(SQL_HANDLE_STMT, self.handle as SQLHANDLE) {
                 SQL_SUCCESS => (),
-                other => {
-                    if !panicking() {
-                        panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
-                    }
-                }
+                other => if !panicking() {
+                    panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
+                },
             }
         }
     }
@@ -47,8 +45,8 @@ impl<'env, 'param> HStmt<'env> {
 
         let mut out = null_mut();
         unsafe {
-            let result: Return<()> = SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out)
-                .into();
+            let result: Return<()> =
+                SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out).into();
             result.map(|()| HStmt { parent: PhantomData, handle: out as SQLHSTMT })
         }
     }
@@ -105,8 +103,6 @@ impl<'env, 'param> HStmt<'env> {
 
     /// Binds a parameter to a parameter marker in an SQL Statement
     ///
-    /// #Unsafe
-    ///
     /// It is the callers responsibility to make sure the bound parameters live long enough.
     pub unsafe fn bind_input_parameter<T>(
         &mut self,
@@ -155,5 +151,27 @@ impl<'env, 'param> HStmt<'env> {
 
     pub fn execute(&mut self) -> ReturnOption<()> {
         unsafe { SQLExecute(self.handle).into() }
+    }
+
+    /// Binds application data buffers to columns in the result set
+    ///
+    /// It is the callers responsibility to make sure the bound columns live long enough.
+    pub unsafe fn bind_col<T>(
+        &mut self,
+        column_number: SQLUSMALLINT,
+        value: &mut T,
+        indicator: &mut SQLLEN,
+    ) -> Return<()>
+    where
+        T: CDataType,
+    {
+        SQLBindCol(
+            self.handle,
+            column_number,
+            T::c_data_type(),
+            value.mut_sql_ptr(),
+            value.buffer_len(),
+            indicator,
+        ).into()
     }
 }
