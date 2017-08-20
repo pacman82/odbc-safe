@@ -13,7 +13,8 @@ impl<D: Diagnostics> From<D> for LastError {
     fn from(source: D) -> Self {
         let mut buffer = [0; 512];
         match source.diagnostics(1, &mut buffer) {
-            ReturnOption::Success(dr) | ReturnOption::Info(dr) => LastError(
+            ReturnOption::Success(dr) |
+            ReturnOption::Info(dr) => LastError(
                 from_utf8(&buffer[0..(dr.text_length as usize)])
                     .unwrap()
                     .to_owned(),
@@ -70,7 +71,8 @@ where
 fn execute_query<'a>(conn: &'a Connection) -> MyResult<ResultSet<'a, 'a, 'a, Unprepared>> {
     let stmt = Statement::with_parent(conn).unwrap();
     match stmt.exec_direct("SELECT year, title FROM Movies") {
-        ReturnOption::Success(s) | ReturnOption::Info(s) => Ok(s),
+        ReturnOption::Success(s) |
+        ReturnOption::Info(s) => Ok(s),
         ReturnOption::NoData(_) => Err(LastError(
             "Statement did not return a Result Set.".to_owned(),
         )),
