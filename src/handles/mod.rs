@@ -22,7 +22,10 @@ mod henv;
 mod hdbc;
 mod hstmt;
 
+/// Basic functionality for all wrappers around ODBC Handles
 pub unsafe trait Handle {
+    /// Returns a ptr to the wrapped ODBC Object
     fn handle(&self) -> SQLHANDLE;
+    /// Returns the type of the ODBC Object wrapped
     fn handle_type() -> HandleType;
 }
