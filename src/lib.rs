@@ -28,7 +28,7 @@ use output_buffer::OutputBuffer;
 pub use return_::{Return, Success, Info, Error};
 pub use return_option::ReturnOption;
 pub use sql_str::SqlStr;
-pub use statement::{Statement, NoCursor, Open, Positioned, Unprepared, Prepared};
+pub use statement::{Statement, NoCursor, Open, Positioned, Unprepared, Prepared, CursorState};
 pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use version::Version;
 

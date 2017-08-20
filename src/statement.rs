@@ -64,7 +64,7 @@ pub enum Prepared {}
 #[allow(missing_copy_implementations)]
 pub enum Unprepared {}
 
-
+/// Implemented by the `Open` and `Positioned` states for `Statement`.
 pub trait CursorState {}
 impl CursorState for Open {}
 impl CursorState for Positioned {}
@@ -120,8 +120,8 @@ impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
     pub fn bind_col<'col_new, T>(
         mut self,
         column_number: SQLUSMALLINT,
-        value: &mut T,
-        indicator: &mut SQLLEN,
+        value: &'col_new mut T,
+        indicator: &'col_new mut SQLLEN,
     ) -> Return<Statement<'con, 'param, 'col_new, S, A>, Self>
     where
         T: CDataType + ?Sized,
