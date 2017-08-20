@@ -153,6 +153,11 @@ impl<'env, 'param> HStmt<'env> {
         unsafe { SQLExecute(self.handle).into() }
     }
 
+    /// Release all columen buffers bound by `bind_col`. Except bookmark column.
+    pub fn reset_columns(&mut self) -> Return<()> {
+        unsafe { SQLFreeStmt(self.handle, SQL_UNBIND).into() }
+    }
+
     /// Binds application data buffers to columns in the result set
     ///
     /// It is the callers responsibility to make sure the bound columns live long enough.
@@ -163,7 +168,7 @@ impl<'env, 'param> HStmt<'env> {
         indicator: &mut SQLLEN,
     ) -> Return<()>
     where
-        T: CDataType,
+        T: CDataType + ?Sized,
     {
         SQLBindCol(
             self.handle,

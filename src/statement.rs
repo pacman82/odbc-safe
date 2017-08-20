@@ -2,22 +2,28 @@ use super::*;
 use odbc_sys::*;
 use std::marker::PhantomData;
 
-/// A `Statement` is most easily thought of as an SQL statement, such as `SELECT * FROM Employee`.
+/// A `Statement` is most easily thought of as an SQL statement, such as
+/// `SELECT * FROM Employee`.
 ///
 /// * The statement's state
 /// * The current statement-level diagnostics
-/// * The addresses of the application variables bound to the statement's parameters and result set
+/// * The addresses of the application variables bound to the statement's
+/// parameters and result set
 ///   columns
 /// * The current settings of each statement attribute
 ///
 /// See [Statement Handles][1]
 ///
-/// Specific to the rust wrapper of an ODBC Statement is, that we do keep track of the lifetimes of
-/// the parent `Connection`, parameters as well as `columns` bound to the `Statement`. Since it is
-/// possible to unbind the parameters and columns we have to keep track of their lifetimes
+/// Specific to the rust wrapper of an ODBC Statement is, that we do keep track
+/// of the lifetimes of
+/// the parent `Connection`, parameters as well as `columns` bound to the
+/// `Statement`. Since it is
+/// possible to unbind the parameters and columns we have to keep track of
+/// their lifetimes
 /// seperatly.
 ///
-/// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/statement-handles
+/// [1]: https://docs.microsoft.
+/// com/sql/odbc/reference/develop-app/statement-handles
 #[derive(Debug)]
 pub struct Statement<'con, 'param, 'col, C = NoCursor, A = Unprepared> {
     cursor: PhantomData<C>,
@@ -28,27 +34,32 @@ pub struct Statement<'con, 'param, 'col, C = NoCursor, A = Unprepared> {
     handle: HStmt<'con>,
 }
 
-/// Cursor state of `Statement`. A statement is likely to enter this state after executing e.g a
+/// Cursor state of `Statement`. A statement is likely to enter this state
+/// after executing e.g a
 /// `SELECT` query.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
 pub enum Opened {}
-/// State used by `Statement`. A statement is likely to enter this state after executing e.g. a
+/// State used by `Statement`. A statement is likely to enter this state after
+/// executing e.g. a
 /// `CREATE TABLE` statement.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
 pub enum NoCursor {}
-/// Cursor state of `Statement`. A statement will enter this state after a successful call to
+/// Cursor state of `Statement`. A statement will enter this state after a
+/// successful call to
 /// `fetch()`
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
 pub enum Positioned {}
-/// State used by `Statement`. A statement will enter this state after a successful call to
+/// State used by `Statement`. A statement will enter this state after a
+/// successful call to
 /// `prepare()`.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
 pub enum Prepared {}
-/// State used by `Statement`. Indicates that no Access Plan has been created, yet.
+/// State used by `Statement`. Indicates that no Access Plan has been created,
+/// yet.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
 pub enum Unprepared {}
@@ -84,7 +95,7 @@ impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
         parameter_number: SQLUSMALLINT,
         parameter_type: DataType,
         value: Option<&'p T>,
-    ) -> Return<Statement<'con, 'p, 'col, S, A>, Statement<'con, 'param, 'col, S, A>>
+    ) -> Return<Statement<'con, 'p, 'col, S, A>, Self>
     where
         T: CDataType + ?Sized,
         'param: 'p,
@@ -102,13 +113,42 @@ impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
         }
     }
 
+    /// Binds a buffer and an indicator to a column.
+    ///
+    /// See [SQLBindCol][1]:
+    /// [1]: [https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindcol-function]
+    pub fn bind_col<'col_new, T>(
+        mut self,
+        column_number: SQLUSMALLINT,
+        value: &mut T,
+        indicator: &mut SQLLEN,
+    ) -> Return<Statement<'con, 'param, 'col_new, S, A>, Self>
+    where
+        T: CDataType + ?Sized,
+        'col: 'col_new,
+    {
+        unsafe {
+            match self.handle.bind_col(column_number, value, indicator) {
+                Success(()) => Success(self.transit()),
+                Info(()) => Info(self.transit()),
+                Error(()) => Error(self.transit()),
+            }
+        }
+    }
+
     /// Unbinds the parameters from the parameter markers
     pub fn reset_parameters(mut self) -> Statement<'con, 'static, 'col, S, A> {
         self.handle.reset_parameters().unwrap();
         self.transit()
     }
 
-    fn transit<'p, S2, A2>(self) -> Statement<'con, 'p, 'col, S2, A2> {
+    /// Unbinds column buffers from result set.
+    pub fn reset_columns(mut self) -> Statement<'con, 'param, 'static, S, A> {
+        self.handle.reset_columns().unwrap();
+        self.transit()
+    }
+
+    fn transit<'p, 'c, S2, A2>(self) -> Statement<'con, 'p, 'c, S2, A2> {
         Statement {
             handle: self.handle,
             parameters: PhantomData,
@@ -126,7 +166,8 @@ where
     /// Returns the number of columns of the result set
     ///
     /// See [SQLNumResultCols][1]
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlnumresultcols-function
+    /// [1]: https://docs.microsoft.
+    /// com/sql/odbc/reference/syntax/sqlnumresultcols-function
     pub fn num_result_cols(&self) -> Return<SQLSMALLINT> {
         self.handle.num_result_cols()
     }
@@ -135,11 +176,16 @@ where
     ///
     /// See [SQLFetch][1]
     /// See [Fetching a Row of Data][2]
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlfetch-function
-    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/fetching-a-row-of-data
+    /// [1]: https://docs.microsoft.
+    /// com/sql/odbc/reference/syntax/sqlfetch-function
+    /// [2]: https://docs.microsoft.
+    /// com/sql/odbc/reference/develop-app/fetching-a-row-of-data
     pub fn fetch(
         mut self,
-    ) -> ReturnOption<Statement<'con, 'param, 'col, Positioned, A>, Statement<'con, 'param, 'col, NoCursor, A>> {
+    ) -> ReturnOption<
+        Statement<'con, 'param, 'col, Positioned, A>,
+        Statement<'con, 'param, 'col, NoCursor, A>,
+    > {
         match self.handle.fetch() {
             ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
             ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
@@ -148,13 +194,16 @@ where
         }
     }
 
-    /// Closes the cursor. Cursors only need to be closed explicitly if the Statement handle is
+    /// Closes the cursor. Cursors only need to be closed explicitly if the
+    /// Statement handle is
     /// intended to be reused, but a result set is not consumed.
     ///
     /// See [SQLCloseCursor][1]
     /// See [Closing the Cursor][2]
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlclosecursor-function
-    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/closing-the-cursor
+    /// [1]: https://docs.microsoft.
+    /// com/sql/odbc/reference/syntax/sqlclosecursor-function
+    /// [2]: https://docs.microsoft.
+    /// com/sql/odbc/reference/develop-app/closing-the-cursor
     pub fn close_cursor(
         mut self,
     ) -> Return<Statement<'con, 'param, 'col, NoCursor>, Statement<'con, 'param, 'col, C, A>> {
@@ -184,19 +233,27 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
     ///
     /// See [SQLPrepare Function][1]
     /// See [Prepare and Execute a Statement (ODBC)][2]
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlprepare-function
+    /// [1]: https://docs.microsoft.
+    /// com/sql/odbc/reference/syntax/sqlprepare-function
     /// [2]: https://docs.microsoft.com/sql/relational-databases/native-client-odbc-how-to/execute-queries/prepare-and-execute-a-statement-odbc
     pub fn prepare<T>(
         mut self,
         statement_text: &T,
-    ) -> Return<Statement<'con, 'param, 'col, NoCursor, Prepared>, Statement<'con, 'param, 'col, NoCursor>>
+    ) -> Return<
+        Statement<'con, 'param, 'col, NoCursor, Prepared>,
+        Statement<'con, 'param, 'col, NoCursor>,
+    >
     where
         T: SqlStr + ?Sized,
     {
-        // According to the state transition table preparing statements which are already prepared
-        // is possible. However we would need to check the status code in order to decide which
-        // state the `Statement` is in the case of an error. So for now we only support preparing
-        // freshly allocated statements until someone has a use case for 'repreparing' a statement.
+        // According to the state transition table preparing statements which are
+        // already prepared
+        // is possible. However we would need to check the status code in order to
+        // decide which
+        // state the `Statement` is in the case of an error. So for now we only support
+        // preparing
+        // freshly allocated statements until someone has a use case for 'repreparing'
+        // a statement.
         match self.handle.prepare(statement_text) {
             Success(()) => Success(self.transit()),
             Info(()) => Info(self.transit()),
@@ -204,12 +261,15 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
         }
     }
 
-    /// Executes a preparable statement, using the current values of the parametr marker variables.
+    /// Executes a preparable statement, using the current values of the
+    /// parametr marker variables.
     ///
     /// * See [SQLExecDirect][1]
     /// * See [Direct Execution][2]
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlexecdirect-function
-    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/direct-execution-odbc
+    /// [1]: https://docs.microsoft.
+    /// com/sql/odbc/reference/syntax/sqlexecdirect-function
+    /// [2]: https://docs.microsoft.
+    /// com/sql/odbc/reference/develop-app/direct-execution-odbc
     pub fn exec_direct<T>(
         mut self,
         statement_text: &T,
@@ -227,14 +287,19 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
 }
 
 impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Prepared> {
-    /// Executes a prepared statement, using the current values fo the parameter marker variables
+    /// Executes a prepared statement, using the current values fo the
+    /// parameter marker variables
     /// if any parameter markers exist in the statement.
     ///
     /// See [SQLExecute Function][1]
     /// See [Prepared Execution][2]
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlexecute-function
-    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/prepared-execution-odbc
-    pub fn execute(mut self) -> ReturnOption<Statement<'con, 'param, 'col, Opened, Prepared>, Self> {
+    /// [1]: https://docs.microsoft.
+    /// com/sql/odbc/reference/syntax/sqlexecute-function
+    /// [2]: https://docs.microsoft.
+    /// com/sql/odbc/reference/develop-app/prepared-execution-odbc
+    pub fn execute(
+        mut self,
+    ) -> ReturnOption<Statement<'con, 'param, 'col, Opened, Prepared>, Self> {
         match self.handle.execute() {
             ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
             ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
@@ -248,7 +313,8 @@ impl<'con, 'param, 'col, A> Statement<'con, 'param, 'col, Positioned, A> {
     /// Retrieves data for a single column or output parameter.
     ///
     /// See [SQLGetData][1]
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlgetdata-function
+    /// [1]: https://docs.microsoft.
+    /// com/sql/odbc/reference/syntax/sqlgetdata-function
     pub fn get_data<T>(
         &mut self,
         col_or_param_num: SQLUSMALLINT,
