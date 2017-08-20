@@ -39,7 +39,7 @@ pub struct Statement<'con, 'param, 'col, C = NoCursor, A = Unprepared> {
 /// `SELECT` query.
 #[derive(Debug)]
 #[allow(missing_copy_implementations)]
-pub enum Opened {}
+pub enum Open {}
 /// State used by `Statement`. A statement is likely to enter this state after
 /// executing e.g. a
 /// `CREATE TABLE` statement.
@@ -66,7 +66,7 @@ pub enum Unprepared {}
 
 
 pub trait CursorState {}
-impl CursorState for Opened {}
+impl CursorState for Open {}
 impl CursorState for Positioned {}
 
 impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
@@ -273,7 +273,10 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
     pub fn exec_direct<T>(
         mut self,
         statement_text: &T,
-    ) -> ReturnOption<Statement<'con, 'param, 'col, Opened>, Statement<'con, 'param, 'col, NoCursor>>
+    ) -> ReturnOption<
+        ResultSet<'con, 'param, 'col, Unprepared>,
+        Statement<'con, 'param, 'col, NoCursor>,
+    >
     where
         T: SqlStr + ?Sized,
     {
@@ -297,9 +300,7 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Prepared> {
     /// com/sql/odbc/reference/syntax/sqlexecute-function
     /// [2]: https://docs.microsoft.
     /// com/sql/odbc/reference/develop-app/prepared-execution-odbc
-    pub fn execute(
-        mut self,
-    ) -> ReturnOption<Statement<'con, 'param, 'col, Opened, Prepared>, Self> {
+    pub fn execute(mut self) -> ReturnOption<ResultSet<'con, 'param, 'col, Prepared>, Self> {
         match self.handle.execute() {
             ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
             ReturnOption::Info(()) => ReturnOption::Info(self.transit()),

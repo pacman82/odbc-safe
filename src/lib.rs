@@ -16,21 +16,21 @@
 extern crate odbc_sys;
 
 pub use c_data_type::CDataType;
-pub use data_source::{DataSource, Unconnected, Connection, Connected};
+pub use data_source::{DataSource, Unconnected, Connected};
 pub use data_type::DataType;
 pub use diagnostics::{Diagnostics, DiagResult};
 pub use environment::Environment;
+
+use handles::{HEnv, HDbc, HStmt};
+pub use handles::Handle;
 pub use indicator::Indicator;
+use output_buffer::OutputBuffer;
 pub use return_::{Return, Success, Info, Error};
 pub use return_option::ReturnOption;
 pub use sql_str::SqlStr;
-pub use statement::{Statement, NoCursor, Opened, Positioned, Unprepared, Prepared};
+pub use statement::{Statement, NoCursor, Open, Positioned, Unprepared, Prepared};
 pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use version::Version;
-pub use handles::Handle;
-
-use handles::{HEnv, HDbc, HStmt};
-use output_buffer::OutputBuffer;
 
 mod version;
 mod return_;
@@ -45,3 +45,8 @@ mod c_data_type;
 mod indicator;
 mod data_type;
 mod output_buffer;
+
+/// `Connection` can be used as a shorthand for a `DataSource` in `Connected` state.
+pub type Connection<'env> = DataSource<'env, Connected<'env>>;
+/// Shorthand for `Statements` in `Open` state.
+pub type ResultSet<'con, 'param, 'col, P> = Statement<'con, 'param, 'col, Open, P>;

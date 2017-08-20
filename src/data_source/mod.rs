@@ -24,9 +24,6 @@ pub struct DataSource<'env, S: HDbcWrapper<'env> = Unconnected<'env>> {
     handle: S::Handle,
 }
 
-/// `Connection` can be used as a shorthand for a `DataSource` in `Connected` state
-pub type Connection<'env> = DataSource<'env, Connected<'env>>;
-
 impl<'env, Any> DataSource<'env, Any>
 where
     Any: HDbcWrapper<'env>,

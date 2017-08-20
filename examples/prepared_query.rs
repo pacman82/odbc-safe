@@ -33,7 +33,7 @@ fn prepare_query<'a>(conn: &'a Connection) -> Statement<'a, 'a, 'a, NoCursor, Pr
 fn execute_query<'a>(
     stmt: Statement<'a, 'a, 'a, NoCursor, Prepared>,
     year: i32,
-) -> Statement<'a, 'a, 'a, Opened, Prepared> {
+) -> ResultSet<'a, 'a, 'a, Prepared> {
     let stmt = stmt.bind_input_parameter(1, DataType::Integer, Some(&year))
         .unwrap();
     let stmt = match stmt.execute() {
@@ -46,7 +46,7 @@ fn execute_query<'a>(
 }
 
 fn print_fields<'a>(
-    result_set: Statement<'a, 'a, 'a, Opened, Prepared>,
+    result_set: ResultSet<'a, 'a, 'a, Prepared>,
 ) -> Statement<'a, 'a, 'a, NoCursor, Prepared> {
     let mut buffer = [0u8; 512];
     let mut cursor = match result_set.fetch() {
