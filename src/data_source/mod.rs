@@ -16,6 +16,13 @@ mod hdbc_wrapper;
 /// * The handles of statements and descriptors currently allocated on the connection
 /// * The current settings of each connection attribute
 ///
+/// # States
+///
+/// A `DataSource` is in one of two states `Connected` or `Unconnected`. These are modeled in the
+/// type at compile time. Every new `DataSource` starts out as `Unconnected`. To execute a query it
+/// needs to be `Connected`. You can achieve this by calling e.g. `connect` and capture the result
+/// in a new binding which will be of type `DataSource::<'env, Connected<'env>>`.
+///
 /// See [Connection Handles in the ODBC Reference][1]
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/connection-handles
 #[derive(Debug)]

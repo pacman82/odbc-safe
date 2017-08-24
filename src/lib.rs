@@ -16,7 +16,7 @@
 extern crate odbc_sys;
 
 pub use c_data_type::CDataType;
-pub use data_source::{DataSource, Unconnected, Connected};
+pub use data_source::{HDbcWrapper, DataSource, Unconnected, Connected};
 pub use data_type::DataType;
 pub use diagnostics::{Diagnostics, DiagResult};
 pub use environment::Environment;
