@@ -1,6 +1,5 @@
 use super::*;
 use odbc_sys::*;
-use std::cmp::min;
 /// A buffer large enough to hold an SOLState for diagnostics and a terminating zero.
 pub type State = [SQLCHAR; SQL_SQLSTATE_SIZE + 1];
 
@@ -88,7 +87,7 @@ impl<H: Handle> Diagnostics for H {
                 state.as_mut_ptr(),
                 &mut native_error,
                 message_text.as_mut_ptr(),
-                min(message_text.len() as SQLSMALLINT, SQLSMALLINT::max_value()),
+                message_text.buf_len(),
                 &mut text_length,
             );
             let result = DiagResult {

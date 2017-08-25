@@ -113,6 +113,34 @@ impl<'env> DataSource<'env, Unconnected<'env>> {
             Error(()) => Error(self.transit()),
         }
     }
+
+    /// Connects to a data source using a connection string.
+    ///
+    /// For the syntax regarding the connections string see [SQLDriverConnect][1]. This method is
+    /// equivalent of calling `odbc_sys::SQLDriverConnect` with the `SQL_DRIVER_NOPROMPT` parameter.
+    ///
+    /// See [Choosing a Data Source or Driver][2]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldriverconnect-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/choosing-a-data-source-or-driver
+    pub fn connect_with_connection_string<C>(
+        mut self,
+        connection_string: &C,
+    ) -> Return<Connection<'env>, Self>
+    where
+        C: SqlStr + ?Sized,
+    {
+        // We do not care for now.
+        let mut out_connection_string = [];
+        match self.handle.driver_connect(
+            connection_string,
+            &mut out_connection_string,
+            SQL_DRIVER_NOPROMPT,
+        ) {
+            Success(_) => Success(self.transit()),
+            Info(_) => Info(self.transit()),
+            Error(()) => Error(self.transit()),
+        }
+    }
 }
 
 impl<'env> Connection<'env> {

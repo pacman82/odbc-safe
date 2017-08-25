@@ -94,6 +94,32 @@ impl<'env> HDbc<'env> {
         }
     }
 
+    pub fn driver_connect<I>(
+        &mut self,
+        in_connection_string: &I,
+        out_connection_string: &mut [u8],
+        driver_completion: SqlDriverConnectOption,
+    ) -> Return<SQLSMALLINT>
+    where
+        I: SqlStr + ?Sized,
+    {
+        unsafe {
+            let window_handle = null_mut();
+            let mut out_connection_string_len = 0;
+            let ret: Return<()> = SQLDriverConnect(
+                self.handle,
+                window_handle,
+                in_connection_string.as_text_ptr(),
+                in_connection_string.text_length(),
+                out_connection_string.mut_buf_ptr(),
+                out_connection_string.buf_len(),
+                &mut out_connection_string_len,
+                driver_completion,
+            ).into();
+            ret.map(|()| out_connection_string_len )
+        }
+    }
+
     pub fn disconnect(&mut self) -> Return<()> {
         unsafe { SQLDisconnect(self.handle).into() }
     }

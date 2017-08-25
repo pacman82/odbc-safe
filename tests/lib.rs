@@ -82,6 +82,20 @@ fn connect_to_postgres() {
 
 #[cfg_attr(not(feature = "travis"), ignore)]
 #[test]
+fn connect_to_postgres_with_connection_string() {
+    let env = Environment::new().unwrap();
+    let env: Environment<Odbc3> = env.declare_version().unwrap();
+    let dbc = DataSource::with_parent(&env).unwrap();
+    let dbc = dbc.connect_with_connection_string("DSN=PostgreSQL;UID=postgres");
+    match dbc {
+        Success(c) => assert_no_diagnostic(&c.disconnect()),
+        Info(c) => assert_no_diagnostic(&c),
+        Error(c) => assert_no_diagnostic(&c),
+    };
+}
+
+#[cfg_attr(not(feature = "travis"), ignore)]
+#[test]
 fn query_result() {
     let env = Environment::new().unwrap();
     let env: Environment<Odbc3> = env.declare_version().unwrap();
@@ -90,8 +104,7 @@ fn query_result() {
     {
         let stmt = Statement::with_parent(&dbc).unwrap();
         let stmt = match stmt.exec_direct("SELECT title FROM Movies WHERE year=1968;") {
-            ReturnOption::Success(s) |
-            ReturnOption::Info(s) => {
+            ReturnOption::Success(s) | ReturnOption::Info(s) => {
                 assert_no_diagnostic(&s);
                 s
             }
@@ -133,13 +146,10 @@ fn assert_no_diagnostic(diag: &Diagnostics) {
     use std::str;
     let mut buffer = [0; 512];
     match diag.diagnostics(1, &mut buffer) {
-        ReturnOption::Success(dr) |
-        ReturnOption::Info(dr) => {
-            panic!(
-                "{}",
-                str::from_utf8(&buffer[0..(dr.text_length as usize)]).unwrap()
-            )
-        }
+        ReturnOption::Success(dr) | ReturnOption::Info(dr) => panic!(
+            "{}",
+            str::from_utf8(&buffer[0..(dr.text_length as usize)]).unwrap()
+        ),
         ReturnOption::Error(()) => panic!("Error during fetching diagnostic record"),
         ReturnOption::NoData(()) => (),
     }
@@ -149,12 +159,10 @@ fn get_last_error(diag: &Diagnostics) -> String {
     use std::str;
     let mut buffer = [0; 512];
     match diag.diagnostics(1, &mut buffer) {
-        ReturnOption::Success(dr) |
-        ReturnOption::Info(dr) => {
-            str::from_utf8(&buffer[0..(dr.text_length as usize)])
-                .unwrap()
-                .to_owned()
-        }
+        ReturnOption::Success(dr) | ReturnOption::Info(dr) => str::from_utf8(
+            &buffer[0..(dr.text_length as usize)],
+        ).unwrap()
+            .to_owned(),
         ReturnOption::Error(()) => panic!("Error during fetching diagnostic record"),
         ReturnOption::NoData(()) => panic!("No diagnostic available"),
     }
