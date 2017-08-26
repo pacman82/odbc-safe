@@ -140,6 +140,16 @@ fn auto_disconnect() {
     // No panic on Drop, because of automatic disconnect
 }
 
+#[cfg_attr(not(feature = "travis"), ignore)]
+#[test]
+fn not_read_only() {
+    let env = Environment::new().unwrap();
+    let env: Environment<Odbc3> = env.declare_version().unwrap();
+    let dbc = DataSource::with_parent(&env).unwrap();
+    let mut dbc = dbc.connect("PostgreSQL", "postgres", "").unwrap();
+    assert!(!dbc.is_read_only().unwrap());
+}
+
 /// Checks for a diagnstic record. Should one be present this function panics printing the contents
 /// of said record.
 fn assert_no_diagnostic(diag: &Diagnostics) {

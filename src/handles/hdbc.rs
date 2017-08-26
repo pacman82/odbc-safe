@@ -123,4 +123,19 @@ impl<'env> HDbc<'env> {
     pub fn disconnect(&mut self) -> Return<()> {
         unsafe { SQLDisconnect(self.handle).into() }
     }
+
+    /// Returns wether the data source is read only
+    pub fn is_read_only(&mut self) -> Return<bool> {
+        unsafe {
+            let mut buffer = [0; 2];
+            let ret: Return<()> = SQLGetInfo(
+                self.handle,
+                SQL_DATA_SOURCE_READ_ONLY,
+                buffer.as_mut_ptr() as SQLPOINTER,
+                buffer.buf_len(),
+                null_mut(),
+            ).into();
+            ret.map(|()| match buffer[0] as char {'N' => false, 'Y' => true, _ => panic!(r#"Briver may only return "N" or "Y""#),})
+        }
+    }
 }
