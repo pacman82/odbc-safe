@@ -13,7 +13,7 @@
         trivial_numeric_casts, unused_import_braces, unused_qualifications
 )]
 
-extern crate odbc_sys;
+pub extern crate odbc_sys;
 
 pub use c_data_type::CDataType;
 pub use data_source::{HDbcWrapper, DataSource, Unconnected, Connected};
@@ -21,16 +21,17 @@ pub use data_type::DataType;
 pub use diagnostics::{Diagnostics, DiagResult};
 pub use environment::Environment;
 
-use handles::{HEnv, HDbc, HStmt};
 pub use handles::Handle;
 pub use indicator::Indicator;
-use output_buffer::OutputBuffer;
 pub use return_::{Return, Success, Info, Error};
 pub use return_option::ReturnOption;
 pub use sql_str::SqlStr;
 pub use statement::{Statement, NoCursor, Open, Positioned, Unprepared, Prepared, CursorState};
 pub use version::{NoVersion, Odbc3, Odbc3m8};
 pub use version::Version;
+
+use output_buffer::OutputBuffer;
+use handles::{HEnv, HDbc, HStmt};
 
 mod version;
 mod return_;
