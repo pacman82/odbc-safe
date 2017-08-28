@@ -23,7 +23,7 @@ unsafe impl CDataType for [SQLCHAR] {
     }
 
     fn sql_ptr(&self) -> *const c_void {
-        if self.len() == 0 {
+        if self.is_empty() {
             null()
         } else {
             self.as_ptr() as SQLPOINTER
@@ -31,7 +31,7 @@ unsafe impl CDataType for [SQLCHAR] {
     }
 
     fn mut_sql_ptr(&mut self) -> SQLPOINTER {
-        if self.len() == 0 {
+        if self.is_empty() {
             null_mut()
         } else {
             self.as_mut_ptr() as SQLPOINTER

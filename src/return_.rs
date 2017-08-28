@@ -57,8 +57,7 @@ impl<T, E> Return<T, E> {
         U: From<E>,
     {
         match self {
-            Success(v) => Ok(v),
-            Info(v) => Ok(v),
+            Success(v) | Info(v) => Ok(v),
             Error(e) => Err(e.into()),
         }
     }

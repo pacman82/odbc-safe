@@ -1,6 +1,6 @@
 use super::*;
 use odbc_sys::*;
-/// A buffer large enough to hold an SOLState for diagnostics and a terminating zero.
+/// A buffer large enough to hold an `SOLState` for diagnostics and a terminating zero.
 pub type State = [SQLCHAR; SQL_SQLSTATE_SIZE + 1];
 
 /// Result of `Diagnostics::diagnostics`
@@ -116,9 +116,9 @@ where
         rec_number: SQLSMALLINT,
         message_text: &mut [SQLCHAR],
     ) -> ReturnOption<DiagResult> {
-        match self {
-            &Success(ref s) | &Info(ref s) => s.diagnostics(rec_number, message_text),
-            &Error(ref e) => e.diagnostics(rec_number, message_text),
+        match *self {
+            Success(ref s) | Info(ref s) => s.diagnostics(rec_number, message_text),
+            Error(ref e) => e.diagnostics(rec_number, message_text),
         }
     }
 }

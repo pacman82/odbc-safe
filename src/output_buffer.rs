@@ -20,7 +20,7 @@ impl OutputBuffer for [u8] {
     }
 
     fn mut_buf_ptr(&mut self) -> *mut u8 {
-        if self.len() == 0 {
+        if self.is_empty() {
             null_mut()
         } else {
             self.as_mut_ptr()

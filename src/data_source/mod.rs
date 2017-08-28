@@ -165,7 +165,7 @@ impl<'env> Connection<'env> {
     }
 
     /// `true` if the data source is set to READ ONLY mode, `false` otherwise.
-    pub fn is_read_only(&mut self) -> Return<bool>{
+    pub fn is_read_only(&mut self) -> Return<bool> {
         self.handle.is_read_only()
     }
 }

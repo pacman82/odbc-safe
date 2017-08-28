@@ -55,7 +55,7 @@ fn main() {
 
 fn run(env: &Environment<Odbc3>) -> MyResult<()> {
 
-    let conn = connect(&env)?;
+    let conn = connect(env)?;
     let result_set = execute_query(&conn)?;
     print_fields(result_set)
 }
