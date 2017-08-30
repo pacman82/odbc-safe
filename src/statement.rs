@@ -309,6 +309,35 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
 }
 
 impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Prepared> {
+
+    /// Return information about result set column
+    ///
+    /// See [SQLDescribeCol Function][1]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldescribecol-function
+    pub fn describe_col<T>(
+        &mut self,
+        column_number: SQLUSMALLINT,
+        column_name: &mut T,
+        column_name_indicator: &mut SQLSMALLINT,
+        nullable: &mut Nullable,
+    ) -> Return<Option<DataType>>
+    where
+        T: OutputBuffer + ?Sized,
+    {
+        let mut data_type = SQL_UNKNOWN_TYPE;
+        let mut column_size = 0;
+        let mut decimal_digits = 0;
+        self.handle.describe_col(
+            column_number,
+            column_name,
+            column_name_indicator,
+            &mut data_type,
+            &mut column_size,
+            &mut decimal_digits,
+            nullable
+        ).map(|()| DataType::new(data_type, column_size, decimal_digits))
+    }
+
     /// Executes a prepared statement, using the current values fo the
     /// parameter marker variables
     /// if any parameter markers exist in the statement.
