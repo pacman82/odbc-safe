@@ -44,12 +44,16 @@ impl<'env, 'param> HStmt<'env> {
 
     /// Allocates a new Statement Handle
     pub fn allocate(parent: &HDbc) -> Return<Self> {
-
         let mut out = null_mut();
         unsafe {
             let result: Return<()> = SQLAllocHandle(SQL_HANDLE_STMT, parent.handle(), &mut out)
                 .into();
-            result.map(|()| HStmt { parent: PhantomData, handle: out as SQLHSTMT })
+            result.map(|()| {
+                HStmt {
+                    parent: PhantomData,
+                    handle: out as SQLHSTMT,
+                }
+            })
         }
     }
 
@@ -180,5 +184,33 @@ impl<'env, 'param> HStmt<'env> {
             value.buffer_len(),
             indicator,
         ).into()
+    }
+
+    pub fn describe_col<T>(
+        &mut self,
+        column_number: SQLUSMALLINT,
+        column_name: &mut T,
+        column_name_indicator: &mut SQLSMALLINT,
+        data_type: &mut SqlDataType,
+        column_size: &mut SQLULEN,
+        decimal_digits: &mut SQLSMALLINT,
+        nullable: &mut Nullable,
+    ) -> Return<()>
+    where
+        T: OutputBuffer + ?Sized,
+    {
+        unsafe {
+            SQLDescribeCol(
+                self.handle,
+                column_number,
+                column_name.mut_buf_ptr(),
+                column_name.buf_len(),
+                column_name_indicator,
+                data_type,
+                column_size,
+                decimal_digits,
+                nullable,
+            ).into()
+        }
     }
 }

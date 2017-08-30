@@ -1,5 +1,5 @@
-extern crate odbc_sys;
 extern crate odbc_safe;
+extern crate odbc_sys;
 
 use odbc_safe::*;
 
@@ -26,7 +26,6 @@ fn wrong_datasource() {
 
 #[test]
 fn diagnostics() {
-
     let expected = if cfg!(target_os = "windows") {
         "[Microsoft][ODBC Driver Manager] Data source name not found and no default driver \
          specified"
@@ -104,8 +103,7 @@ fn query_result() {
     {
         let stmt = Statement::with_parent(&dbc).unwrap();
         let stmt = match stmt.exec_direct("SELECT title FROM Movies WHERE year=1968;") {
-            ReturnOption::Success(s) |
-            ReturnOption::Info(s) => {
+            ReturnOption::Success(s) | ReturnOption::Info(s) => {
                 assert_no_diagnostic(&s);
                 s
             }
@@ -127,6 +125,33 @@ fn query_result() {
         } else {
             panic!("No field found!");
         }
+    }
+    dbc.disconnect().unwrap();
+}
+
+#[cfg_attr(not(feature = "travis"), ignore)]
+#[test]
+fn describe_result() {
+    let env = Environment::new().unwrap();
+    let env: Environment<Odbc3> = env.declare_version().unwrap();
+    let dbc = DataSource::with_parent(&env).unwrap();
+    let dbc = dbc.connect("PostgreSQL", "postgres", "").unwrap();
+    {
+        let stmt = Statement::with_parent(&dbc).unwrap();
+        let mut stmt = match stmt.exec_direct("SELECT title, year FROM Movies") {
+            ReturnOption::Success(s) | ReturnOption::Info(s) => s,
+            _ => panic!("Did not return Result Set"),
+        };
+        let mut buffer = [0u8; 6];
+        let mut indicator = 0;
+        let mut nullable = odbc_sys::SQL_NO_NULLS;
+        let data_type = stmt.describe_col(1, &mut buffer[..], &mut indicator, &mut nullable)
+            .unwrap();
+        println!("DataType {:?}", data_type);
+        assert_eq!(data_type, Some(DataType::Varchar(255)));
+        assert_eq!(&buffer, b"title\0");
+        assert_eq!(indicator, 5);
+        assert_eq!(nullable, odbc_sys::SQL_NULLABLE);
     }
     dbc.disconnect().unwrap();
 }
@@ -157,13 +182,10 @@ fn assert_no_diagnostic(diag: &Diagnostics) {
     use std::str;
     let mut buffer = [0; 512];
     match diag.diagnostics(1, &mut buffer) {
-        ReturnOption::Success(dr) |
-        ReturnOption::Info(dr) => {
-            panic!(
-                "{}",
-                str::from_utf8(&buffer[0..(dr.text_length as usize)]).unwrap()
-            )
-        }
+        ReturnOption::Success(dr) | ReturnOption::Info(dr) => panic!(
+            "{}",
+            str::from_utf8(&buffer[0..(dr.text_length as usize)]).unwrap()
+        ),
         ReturnOption::Error(()) => panic!("Error during fetching diagnostic record"),
         ReturnOption::NoData(()) => (),
     }
@@ -173,12 +195,10 @@ fn get_last_error(diag: &Diagnostics) -> String {
     use std::str;
     let mut buffer = [0; 512];
     match diag.diagnostics(1, &mut buffer) {
-        ReturnOption::Success(dr) |
-        ReturnOption::Info(dr) => {
-            str::from_utf8(&buffer[0..(dr.text_length as usize)])
-                .unwrap()
-                .to_owned()
-        }
+        ReturnOption::Success(dr) | ReturnOption::Info(dr) => str::from_utf8(
+            &buffer[0..(dr.text_length as usize)],
+        ).unwrap()
+            .to_owned(),
         ReturnOption::Error(()) => panic!("Error during fetching diagnostic record"),
         ReturnOption::NoData(()) => panic!("No diagnostic available"),
     }

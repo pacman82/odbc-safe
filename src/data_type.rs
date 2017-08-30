@@ -1,7 +1,7 @@
 use odbc_sys::*;
 
 /// Describes a column or parameter type.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DataType {
     /// Fixed sized single byte character data
     Char(SQLULEN),
@@ -28,6 +28,29 @@ pub enum DataType {
 /// See [Data Types][1]
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/appendixes/appendix-d-data-types
 impl DataType {
+    /// Creates a `DataType` from a triplet. If the data_type does not require the information
+    /// `column_size` or `decimal_digits`.
+    pub fn new(
+        data_type: SqlDataType,
+        column_size: SQLULEN,
+        decimal_digits: SQLSMALLINT,
+    ) -> Option<DataType> {
+        use DataType::*;
+        match data_type {
+            SQL_CHAR => Some(Char(column_size)),
+            SQL_NUMERIC => Some(Numeric(column_size, decimal_digits)),
+            SQL_DECIMAL => Some(Decimal(column_size, decimal_digits)),
+            SQL_INTEGER => Some(Integer),
+            SQL_SMALLINT => Some(SmallInt),
+            SQL_FLOAT => Some(Float),
+            SQL_REAL => Some(Real),
+            SQL_DOUBLE => Some(Double),
+            SQL_VARCHAR => Some(Varchar(column_size)),
+            SQL_UNKNOWN_TYPE => None,
+            other => panic!("Returned unsupported type: {:?}", other),
+        }
+    }
+
     /// See [SQL Data Types][1]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/appendixes/sql-data-types
     pub fn sql_data_type(&self) -> SqlDataType {
@@ -50,8 +73,7 @@ impl DataType {
     pub fn column_size(&self) -> SQLULEN {
         use DataType::*;
         match *self {
-            Numeric(precision, _) |
-            Decimal(precision, _) => precision,
+            Numeric(precision, _) | Decimal(precision, _) => precision,
             Integer => 10,
             SmallInt => 5,
             Float | Double => 15,
@@ -66,8 +88,7 @@ impl DataType {
         use DataType::*;
         match *self {
             Char(_) | Integer | Float | Real | Double | Varchar(_) => 0,
-            Numeric(_, scale) |
-            Decimal(_, scale) => scale,
+            Numeric(_, scale) | Decimal(_, scale) => scale,
             SmallInt => 5,
         }
     }

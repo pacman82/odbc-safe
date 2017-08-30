@@ -22,8 +22,7 @@ use std::marker::PhantomData;
 /// their lifetimes
 /// seperatly.
 ///
-/// [1]: https://docs.microsoft.
-/// com/sql/odbc/reference/develop-app/statement-handles
+/// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/statement-handles
 #[derive(Debug)]
 pub struct Statement<'con, 'param, 'col, C = NoCursor, A = Unprepared> {
     cursor: PhantomData<C>,
@@ -166,8 +165,7 @@ where
     /// Returns the number of columns of the result set
     ///
     /// See [SQLNumResultCols][1]
-    /// [1]: https://docs.microsoft.
-    /// com/sql/odbc/reference/syntax/sqlnumresultcols-function
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlnumresultcols-function
     pub fn num_result_cols(&self) -> Return<SQLSMALLINT> {
         self.handle.num_result_cols()
     }
@@ -176,10 +174,8 @@ where
     ///
     /// See [SQLFetch][1]
     /// See [Fetching a Row of Data][2]
-    /// [1]: https://docs.microsoft.
-    /// com/sql/odbc/reference/syntax/sqlfetch-function
-    /// [2]: https://docs.microsoft.
-    /// com/sql/odbc/reference/develop-app/fetching-a-row-of-data
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlfetch-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/fetching-a-row-of-data
     pub fn fetch(
         mut self,
     ) -> ReturnOption<
@@ -200,10 +196,8 @@ where
     ///
     /// See [SQLCloseCursor][1]
     /// See [Closing the Cursor][2]
-    /// [1]: https://docs.microsoft.
-    /// com/sql/odbc/reference/syntax/sqlclosecursor-function
-    /// [2]: https://docs.microsoft.
-    /// com/sql/odbc/reference/develop-app/closing-the-cursor
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlclosecursor-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/closing-the-cursor
     pub fn close_cursor(
         mut self,
     ) -> Return<Statement<'con, 'param, 'col, NoCursor>, Statement<'con, 'param, 'col, C, A>> {
@@ -212,6 +206,34 @@ where
             Info(()) => Info(self.transit()),
             Error(()) => Error(self.transit()),
         }
+    }
+
+    /// Return information about result set column
+    ///
+    /// See [SQLDescribeCol Function][1]
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldescribecol-function
+    pub fn describe_col<T>(
+        &mut self,
+        column_number: SQLUSMALLINT,
+        column_name: &mut T,
+        column_name_indicator: &mut SQLSMALLINT,
+        nullable: &mut Nullable,
+    ) -> Return<Option<DataType>>
+    where
+        T: OutputBuffer + ?Sized,
+    {
+        let mut data_type = SQL_UNKNOWN_TYPE;
+        let mut column_size = 0;
+        let mut decimal_digits = 0;
+        self.handle.describe_col(
+            column_number,
+            column_name,
+            column_name_indicator,
+            &mut data_type,
+            &mut column_size,
+            &mut decimal_digits,
+            nullable
+        ).map(|()| DataType::new(data_type, column_size, decimal_digits))
     }
 }
 
@@ -233,8 +255,7 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
     ///
     /// See [SQLPrepare Function][1]
     /// See [Prepare and Execute a Statement (ODBC)][2]
-    /// [1]: https://docs.microsoft.
-    /// com/sql/odbc/reference/syntax/sqlprepare-function
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlprepare-function
     /// [2]: https://docs.microsoft.com/sql/relational-databases/native-client-odbc-how-to/execute-queries/prepare-and-execute-a-statement-odbc
     pub fn prepare<T>(
         mut self,
@@ -266,10 +287,8 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
     ///
     /// * See [SQLExecDirect][1]
     /// * See [Direct Execution][2]
-    /// [1]: https://docs.microsoft.
-    /// com/sql/odbc/reference/syntax/sqlexecdirect-function
-    /// [2]: https://docs.microsoft.
-    /// com/sql/odbc/reference/develop-app/direct-execution-odbc
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlexecdirect-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/direct-execution-odbc
     pub fn exec_direct<T>(
         mut self,
         statement_text: &T,
@@ -296,10 +315,8 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Prepared> {
     ///
     /// See [SQLExecute Function][1]
     /// See [Prepared Execution][2]
-    /// [1]: https://docs.microsoft.
-    /// com/sql/odbc/reference/syntax/sqlexecute-function
-    /// [2]: https://docs.microsoft.
-    /// com/sql/odbc/reference/develop-app/prepared-execution-odbc
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlexecute-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/prepared-execution-odbc
     pub fn execute(mut self) -> ReturnOption<ResultSet<'con, 'param, 'col, Prepared>, Self> {
         match self.handle.execute() {
             ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
@@ -314,8 +331,7 @@ impl<'con, 'param, 'col, A> Statement<'con, 'param, 'col, Positioned, A> {
     /// Retrieves data for a single column or output parameter.
     ///
     /// See [SQLGetData][1]
-    /// [1]: https://docs.microsoft.
-    /// com/sql/odbc/reference/syntax/sqlgetdata-function
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlgetdata-function
     pub fn get_data<T>(
         &mut self,
         col_or_param_num: SQLUSMALLINT,
