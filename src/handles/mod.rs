@@ -24,8 +24,8 @@ mod hstmt;
 
 /// Basic functionality for all wrappers around ODBC Handles
 pub unsafe trait Handle {
+    /// Used to identify the type of the handle in various functions of the ODBC C interface
+    const HANDLE_TYPE: HandleType;
     /// Returns a ptr to the wrapped ODBC Object
     fn handle(&self) -> SQLHANDLE;
-    /// Returns the type of the ODBC Object wrapped
-    fn handle_type() -> HandleType;
 }

@@ -18,23 +18,19 @@ impl<'env> Drop for HDbc<'env> {
         unsafe {
             match SQLFreeHandle(SQL_HANDLE_DBC, self.handle as SQLHANDLE) {
                 SQL_SUCCESS => (),
-                other => {
-                    if !panicking() {
-                        panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
-                    }
-                }
+                other => if !panicking() {
+                    panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
+                },
             }
         }
     }
 }
 
 unsafe impl<'env> Handle for HDbc<'env> {
+    const HANDLE_TYPE: HandleType = SQL_HANDLE_DBC;
+
     fn handle(&self) -> SQLHANDLE {
         self.handle as SQLHANDLE
-    }
-
-    fn handle_type() -> HandleType {
-        SQL_HANDLE_DBC
     }
 }
 
@@ -66,12 +62,16 @@ impl<'env> HDbc<'env> {
 
     /// Allocates a new Connection Handle
     pub fn allocate(parent: &HEnv) -> Return<Self> {
-
         let mut out = null_mut();
         unsafe {
-            let result: Return<()> = SQLAllocHandle(Self::handle_type(), parent.handle(), &mut out)
-                .into();
-            result.map(|()| HDbc { parent: PhantomData, handle: out as SQLHDBC })
+            let result: Return<()> =
+                SQLAllocHandle(Self::HANDLE_TYPE, parent.handle(), &mut out).into();
+            result.map(|()| {
+                HDbc {
+                    parent: PhantomData,
+                    handle: out as SQLHDBC,
+                }
+            })
         }
     }
 
@@ -116,7 +116,7 @@ impl<'env> HDbc<'env> {
                 &mut out_connection_string_len,
                 driver_completion,
             ).into();
-            ret.map(|()| out_connection_string_len )
+            ret.map(|()| out_connection_string_len)
         }
     }
 
@@ -135,7 +135,11 @@ impl<'env> HDbc<'env> {
                 buffer.buf_len(),
                 null_mut(),
             ).into();
-            ret.map(|()| match buffer[0] as char {'N' => false, 'Y' => true, _ => panic!(r#"Briver may only return "N" or "Y""#),})
+            ret.map(|()| match buffer[0] as char {
+                'N' => false,
+                'Y' => true,
+                _ => panic!(r#"Briver may only return "N" or "Y""#),
+            })
         }
     }
 }

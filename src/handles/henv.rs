@@ -22,34 +22,33 @@ impl Drop for HEnv {
         unsafe {
             match SQLFreeHandle(SQL_HANDLE_ENV, self.handle as SQLHANDLE) {
                 SQL_SUCCESS => (),
-                other => {
-                    if !panicking() {
-                        panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
-                    }
-                }
+                other => if !panicking() {
+                    panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
+                },
             }
         }
     }
 }
 
 unsafe impl Handle for HEnv {
+    const HANDLE_TYPE: HandleType = SQL_HANDLE_ENV;
+
     fn handle(&self) -> SQLHANDLE {
         self.handle as SQLHANDLE
-    }
-
-    fn handle_type() -> HandleType {
-        SQL_HANDLE_ENV
     }
 }
 
 impl HEnv {
     /// Allocates a new Environment Handle
     pub fn allocate() -> Return<HEnv> {
-
         let mut out = null_mut();
         unsafe {
             let result: Return<()> = SQLAllocHandle(SQL_HANDLE_ENV, null_mut(), &mut out).into();
-            result.map(|()| HEnv { handle: out as SQLHENV })
+            result.map(|()| {
+                HEnv {
+                    handle: out as SQLHENV,
+                }
+            })
         }
     }
 
@@ -77,7 +76,7 @@ impl HEnv {
                 description.buf_len(),
                 &mut description_length,
             ).into();
-            ret.map(|()|(name_length, description_length))
+            ret.map(|()| (name_length, description_length))
         }
     }
 
@@ -101,7 +100,7 @@ impl HEnv {
                 attributes.buf_len(),
                 &mut attributes_length,
             ).into();
-            ret.map(|()|(description_length, attributes_length))
+            ret.map(|()| (description_length, attributes_length))
         }
     }
 

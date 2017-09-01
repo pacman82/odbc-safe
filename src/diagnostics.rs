@@ -81,7 +81,7 @@ impl<H: Handle> Diagnostics for H {
             let mut state = [0; 6];
             let mut native_error = 0;
             let ret = SQLGetDiagRec(
-                H::handle_type(),
+                H::HANDLE_TYPE,
                 self.handle(),
                 rec_number,
                 state.as_mut_ptr(),
