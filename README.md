@@ -53,5 +53,5 @@ Want to help out? Just create an issue, pull request or contact markus.klein@liv
 [ODBC]: https://docs.microsoft.com/en-us/sql/odbc/microsoft-open-database-connectivity-odbc
 [docs.rs]: https://docs.rs
 [documentation]: https://docs.rs/odbc-safe/
-[odbc-sys]: https:://github.com/pacman82/odbc-sys
-[odbc-rs]: https:://github.com/koka/odbc-rs
+[odbc-sys]: https://github.com/pacman82/odbc-sys
+[odbc-rs]: https://github.com/koka/odbc-rs
