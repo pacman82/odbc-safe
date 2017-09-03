@@ -18,24 +18,6 @@ pub struct DiagResult {
     pub text_length: SQLSMALLINT,
 }
 
-// /// Returned by `Diagnostics::diagnostics`
-// #[derive(Debug, Clone, Copy)]
-// pub enum DiagReturn {
-//     /// The function successfully returned diagnostic information.
-//     Success(DiagResult),
-//     /// The `message_text` buffer was too small to hold the requested diagnostic message. No
-//     /// diagnostic records were generated. To determine that a truncation occurred, the application
-//     /// must compare the buffer length to the actual number of bytes available, which is found in
-//     /// `DiagResult::text_length`
-//     Info(DiagResult),
-//     /// `rec_number` was negative or `0`.
-//     Error,
-//     /// `rec_number` was greater than the number of diagnostic records that existed for the handle
-//     /// specified in Handle. The function also returns `NoData` for any positive `rec_number` if
-//     /// there are no diagnostic records available.
-//     NoData,
-// }
-
 /// A type implementing this trait is able to provide diagnostic information regarding the last
 /// method call.
 pub trait Diagnostics {
