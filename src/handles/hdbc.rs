@@ -18,9 +18,11 @@ impl<'env> Drop for HDbc<'env> {
         unsafe {
             match SQLFreeHandle(SQL_HANDLE_DBC, self.handle as SQLHANDLE) {
                 SQL_SUCCESS => (),
-                other => if !panicking() {
-                    panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
-                },
+                other => {
+                    if !panicking() {
+                        panic!("Unexepected return value of SQLFreeHandle: {:?}.", other)
+                    }
+                }
             }
         }
     }
@@ -64,8 +66,8 @@ impl<'env> HDbc<'env> {
     pub fn allocate(parent: &HEnv) -> Return<Self> {
         let mut out = null_mut();
         unsafe {
-            let result: Return<()> =
-                SQLAllocHandle(Self::HANDLE_TYPE, parent.handle(), &mut out).into();
+            let result: Return<()> = SQLAllocHandle(Self::HANDLE_TYPE, parent.handle(), &mut out)
+                .into();
             result.map(|()| {
                 HDbc {
                     parent: PhantomData,

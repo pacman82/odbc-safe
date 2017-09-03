@@ -73,7 +73,8 @@ impl DataType {
     pub fn column_size(&self) -> SQLULEN {
         use DataType::*;
         match *self {
-            Numeric(precision, _) | Decimal(precision, _) => precision,
+            Numeric(precision, _) |
+            Decimal(precision, _) => precision,
             Integer => 10,
             SmallInt => 5,
             Float | Double => 15,
@@ -88,7 +89,8 @@ impl DataType {
         use DataType::*;
         match *self {
             Char(_) | Integer | Float | Real | Double | Varchar(_) => 0,
-            Numeric(_, scale) | Decimal(_, scale) => scale,
+            Numeric(_, scale) |
+            Decimal(_, scale) => scale,
             SmallInt => 5,
         }
     }

@@ -103,7 +103,8 @@ fn query_result() {
     {
         let stmt = Statement::with_parent(&dbc).unwrap();
         let stmt = match stmt.exec_direct("SELECT title FROM Movies WHERE year=1968;") {
-            ReturnOption::Success(s) | ReturnOption::Info(s) => {
+            ReturnOption::Success(s) |
+            ReturnOption::Info(s) => {
                 assert_no_diagnostic(&s);
                 s
             }
@@ -139,7 +140,8 @@ fn describe_result() {
     {
         let stmt = Statement::with_parent(&dbc).unwrap();
         let mut stmt = match stmt.exec_direct("SELECT title, year FROM Movies") {
-            ReturnOption::Success(s) | ReturnOption::Info(s) => s,
+            ReturnOption::Success(s) |
+            ReturnOption::Info(s) => s,
             _ => panic!("Did not return Result Set"),
         };
         let mut buffer = [0u8; 6];
@@ -182,10 +184,13 @@ fn assert_no_diagnostic(diag: &Diagnostics) {
     use std::str;
     let mut buffer = [0; 512];
     match diag.diagnostics(1, &mut buffer) {
-        ReturnOption::Success(dr) | ReturnOption::Info(dr) => panic!(
-            "{}",
-            str::from_utf8(&buffer[0..(dr.text_length as usize)]).unwrap()
-        ),
+        ReturnOption::Success(dr) |
+        ReturnOption::Info(dr) => {
+            panic!(
+                "{}",
+                str::from_utf8(&buffer[0..(dr.text_length as usize)]).unwrap()
+            )
+        }
         ReturnOption::Error(()) => panic!("Error during fetching diagnostic record"),
         ReturnOption::NoData(()) => (),
     }
@@ -195,10 +200,12 @@ fn get_last_error(diag: &Diagnostics) -> String {
     use std::str;
     let mut buffer = [0; 512];
     match diag.diagnostics(1, &mut buffer) {
-        ReturnOption::Success(dr) | ReturnOption::Info(dr) => str::from_utf8(
-            &buffer[0..(dr.text_length as usize)],
-        ).unwrap()
-            .to_owned(),
+        ReturnOption::Success(dr) |
+        ReturnOption::Info(dr) => {
+            str::from_utf8(&buffer[0..(dr.text_length as usize)])
+                .unwrap()
+                .to_owned()
+        }
         ReturnOption::Error(()) => panic!("Error during fetching diagnostic record"),
         ReturnOption::NoData(()) => panic!("No diagnostic available"),
     }

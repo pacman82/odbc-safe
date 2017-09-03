@@ -309,7 +309,6 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
 }
 
 impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Prepared> {
-
     /// Return information about result set column
     ///
     /// See [SQLDescribeCol Function][1]
