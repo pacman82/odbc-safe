@@ -1,4 +1,4 @@
-use odbc_sys::*;
+use sys::*;
 
 /// Used to indicate the required target buffer length.
 #[derive(Debug, Clone, Copy)]

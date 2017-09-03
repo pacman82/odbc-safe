@@ -1,5 +1,5 @@
 use super::*;
-use odbc_sys::*;
+use sys::*;
 /// A buffer large enough to hold an `SOLState` for diagnostics and a terminating zero.
 pub type State = [SQLCHAR; SQL_SQLSTATE_SIZE + 1];
 

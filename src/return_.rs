@@ -1,4 +1,4 @@
-use odbc_sys::*;
+use sys::*;
 
 /// Holds result and indicates the overall success or failure of a function.
 #[derive(Debug)]

@@ -1,4 +1,4 @@
-use odbc_sys::*;
+use sys::*;
 use std::ffi::CStr;
 use std::ptr::null;
 

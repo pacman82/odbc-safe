@@ -13,7 +13,7 @@
         trivial_numeric_casts, unused_import_braces, unused_qualifications
 )]
 
-pub extern crate odbc_sys;
+pub extern crate odbc_sys as sys;
 
 pub use c_data_type::CDataType;
 pub use data_source::{HDbcWrapper, DataSource, Unconnected, Connected};

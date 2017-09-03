@@ -1,4 +1,4 @@
-use odbc_sys::*;
+use sys::*;
 
 /// Type indicates an ODBC Version
 pub unsafe trait Version {

@@ -1,5 +1,5 @@
 use super::*;
-use odbc_sys::*;
+use sys::*;
 use std::mem::size_of;
 use std::os::raw::c_void;
 use std::ptr::{null, null_mut};

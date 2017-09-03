@@ -1,5 +1,5 @@
 use super::{Handle, OutputBuffer, Return, ReturnOption};
-use odbc_sys::*;
+use sys::*;
 use std::ptr::null_mut;
 use std::thread::panicking;
 

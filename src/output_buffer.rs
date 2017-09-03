@@ -1,4 +1,4 @@
-use odbc_sys::*;
+use sys::*;
 use std::cmp::min;
 use std::ptr::null_mut;
 

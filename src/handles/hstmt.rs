@@ -1,5 +1,5 @@
 use super::*;
-use odbc_sys::*;
+use sys::*;
 use std::marker::PhantomData;
 use std::ptr::null_mut;
 use std::thread::panicking;

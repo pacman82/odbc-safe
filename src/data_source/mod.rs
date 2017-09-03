@@ -2,7 +2,7 @@ pub use self::connected::Connected;
 pub use self::hdbc_wrapper::HDbcWrapper;
 pub use self::unconnected::Unconnected;
 use super::*;
-use odbc_sys::*;
+use sys::*;
 use std::ops::DerefMut;
 
 mod connected;

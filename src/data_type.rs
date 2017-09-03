@@ -1,4 +1,4 @@
-use odbc_sys::*;
+use sys::*;
 
 /// Describes a column or parameter type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

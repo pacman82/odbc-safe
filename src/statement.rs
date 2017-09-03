@@ -1,5 +1,5 @@
 use super::*;
-use odbc_sys::*;
+use sys::*;
 use std::marker::PhantomData;
 
 /// A `Statement` is most easily thought of as an SQL statement, such as

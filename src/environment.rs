@@ -1,5 +1,5 @@
 use super::*;
-use odbc_sys::*;
+use sys::*;
 use std::marker::PhantomData;
 
 /// An `Environment` is a global context, in which to access data.
@@ -59,11 +59,8 @@ impl<V: Version> Environment<V> {
         server_name: &mut [u8],
         description: &mut [u8],
     ) -> ReturnOption<(SQLSMALLINT, SQLSMALLINT)> {
-        self.handle.data_sources(
-            direction,
-            server_name,
-            description,
-        )
+        self.handle
+            .data_sources(direction, server_name, description)
     }
 
     /// Fills buffers with information about the available datasources
