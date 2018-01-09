@@ -178,6 +178,105 @@ fn not_read_only() {
     assert!(!dbc.is_read_only().unwrap());
 }
 
+#[cfg_attr(not(feature = "travis"), ignore)]
+#[test]
+fn bind_parameter_set() {
+    let env = Environment::new().unwrap();
+    let env: Environment<Odbc3> = env.declare_version().unwrap();
+    let dbc = DataSource::with_parent(&env).unwrap();
+    let dbc = dbc.connect("PostgreSQL", "postgres", "").unwrap();
+    {
+        let stmt = Statement::with_parent(&dbc).unwrap();
+        match stmt.exec_direct( "CREATE TEMPORARY TABLE tbl (x INT NOT NULL, y INT NOT NULL, z INT NOT NULL);" ) {
+            ReturnOption::Success(s) |
+            ReturnOption::Info(s) => {
+                assert_no_diagnostic(&s);
+            }
+            ReturnOption::NoData(s) => {
+                assert_no_diagnostic(&s);
+            }
+            ReturnOption::Error(s) => panic!("{}", get_last_error(&s)),
+        };
+    }
+    {
+        struct Params {
+            x: i32,
+            y: i32,
+            z: i32
+        }
+        let mut params: Vec< Params > = Vec::with_capacity(128);
+        for i in 0..128 {
+            params.push(Params{
+                x: i,
+                y: 2*i,
+                z: 3*i
+            });
+        }
+        let first = params.first().unwrap();
+
+        let stmt = Statement::with_parent(&dbc).unwrap();
+        let stmt = stmt.prepare("INSERT INTO tbl (x,y,z) VALUES (?,?,?);").unwrap();
+        let stmt = stmt.bind_input_parameter(1, DataType::Integer, &first.x, None).unwrap();
+        let stmt = stmt.bind_input_parameter(2, DataType::Integer, &first.y, None).unwrap();
+        let stmt = stmt.bind_input_parameter(3, DataType::Integer, &first.z, None).unwrap();
+        let stmt = unsafe { stmt.bind_parameter_set(&params).unwrap() };
+        match stmt.execute() {
+            ReturnOption::Success(_) |
+            ReturnOption::Info(_) |
+            ReturnOption::NoData(_) => {}
+            ReturnOption::Error(s) => {
+                panic!("Error executing INSERT: {}", get_last_error(&s));
+            },
+        };
+    }
+    {
+        let mut rows: usize = 0;
+        let mut x: i32 = 0;
+        let mut y: i32 = 0;
+        let mut z: i32 = 0;
+
+        let stmt = Statement::with_parent(&dbc).unwrap();
+        let stmt = match stmt.exec_direct("SELECT x,y,z FROM tbl") {
+            ReturnOption::Success(s) |
+            ReturnOption::Info(s) => {
+                assert_no_diagnostic(&s);
+                s
+            }
+            ReturnOption::NoData(_) => panic!("No Data"),
+            ReturnOption::Error(s) => panic!("{}", get_last_error(&s)),
+        };
+        assert_eq!(3, stmt.num_result_cols().unwrap());
+        let mut stmt = {
+            let stmt = stmt.bind_col(1, &mut x, None).unwrap();
+            let stmt = stmt.bind_col(2, &mut y, None).unwrap();
+            let stmt = stmt.bind_col(3, &mut z, None).unwrap();
+            match stmt.fetch() {
+                ReturnOption::Success(s) | ReturnOption::Info(s) => s.reset_columns(),
+                ReturnOption::Error(s) => panic!("Error during fetching row: {}", get_last_error(&s)),
+                ReturnOption::NoData(_) => panic!("Empty result set returned from SELECT"),
+            }
+        };
+        loop {
+            rows += 1;
+            assert_eq!( 2 * x, y );
+            assert_eq!( 3 * x, z );
+
+            stmt = {
+                let stmt = stmt.bind_col(1, &mut x, None).unwrap();
+                let stmt = stmt.bind_col(2, &mut y, None).unwrap();
+                let stmt = stmt.bind_col(3, &mut z, None).unwrap();
+                match stmt.fetch() {
+                    ReturnOption::Success(s) | ReturnOption::Info(s) => s.reset_columns(),
+                    ReturnOption::Error(s) => panic!("Error during fetching row: {}", get_last_error(&s)),
+                    ReturnOption::NoData(_) => break,
+                }
+            }
+        }
+        assert_eq!( 128, rows );
+    }
+    dbc.disconnect().unwrap();
+}
+
 /// Checks for a diagnstic record. Should one be present this function panics printing the contents
 /// of said record.
 fn assert_no_diagnostic(diag: &Diagnostics) {

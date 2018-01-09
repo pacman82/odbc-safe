@@ -61,6 +61,15 @@ impl<T, E> Return<T, E> {
             Error(e) => Err(e.into()),
         }
     }
+
+    /// Indicates if this is `Error(e)` or `Success(v) | Info(v)`.
+    pub fn is_err( &self ) -> bool
+    {
+        match self {
+            &Success(_) | &Info(_) => false,
+            &Error(_) => true,
+        }
+    }
 }
 
 impl From<SQLRETURN> for Return<()> {

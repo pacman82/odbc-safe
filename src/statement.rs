@@ -114,6 +114,24 @@ impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
         }
     }
 
+    pub unsafe fn bind_parameter_set<'p, T>(
+        mut self,
+        parameter_set: &'p [T]
+    ) -> Return<Statement<'con, 'p, 'col, S, A>, Self>
+    where
+        T: Sized,
+        'param: 'p,
+    {
+        match self.handle.bind_parameter_set(
+            std::mem::size_of::<T>(),
+            parameter_set.len(),
+        ) {
+            Success(()) => Success(self.transit()),
+            Info(()) => Info(self.transit()),
+            Error(()) => Error(self.transit()),
+        }
+    }
+
     /// Binds a buffer and an indicator to a column.
     ///
     /// See [SQLBindCol][1]:

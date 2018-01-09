@@ -136,6 +136,31 @@ impl<'env, 'param> HStmt<'env> {
         ).into()
     }
 
+    pub unsafe fn bind_parameter_set(
+        &mut self,
+        parameter_size: usize,
+        array_size: usize
+    ) -> Return<()>
+    {
+        let res: Return<()> = SQLSetStmtAttr(
+            self.handle,
+            SQL_ATTR_PARAM_BIND_TYPE,
+            parameter_size as SQLPOINTER,
+            0
+        ).into();
+
+        if res.is_err() {
+            return res;
+        }
+
+        SQLSetStmtAttr(
+            self.handle,
+            SQL_ATTR_PARAMSET_SIZE,
+            array_size as SQLPOINTER,
+            0
+        ).into()
+    }
+
     pub fn prepare<T>(&mut self, statement_text: &T) -> Return<()>
     where
         T: SqlStr + ?Sized,
