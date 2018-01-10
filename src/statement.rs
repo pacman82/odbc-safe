@@ -1,6 +1,7 @@
 use super::*;
 use sys::*;
 use std::marker::PhantomData;
+use std::cell::{RefCell, Ref, RefMut};
 
 /// A `Statement` is most easily thought of as an SQL statement, such as
 /// `SELECT * FROM Employee`.
@@ -24,13 +25,12 @@ use std::marker::PhantomData;
 ///
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/statement-handles
 #[derive(Debug)]
-pub struct Statement<'con, 'param, 'col, C = NoCursor, A = Unprepared> {
+pub struct Statement<'conn, Params = (), Cols = (), C = NoCursor, A = Unprepared> {
+    handle: HStmt<'conn>,
+    params: Params,
+    cols: Cols,
     cursor: PhantomData<C>,
     access_plan: PhantomData<A>,
-    /// Statement may not outlive parameters bound to it.
-    parameters: PhantomData<&'param [u8]>,
-    columns: PhantomData<&'col [u8]>,
-    handle: HStmt<'con>,
 }
 
 /// Cursor state of `Statement`. A statement is likely to enter this state
@@ -68,7 +68,7 @@ pub trait CursorState {}
 impl CursorState for Open {}
 impl CursorState for Positioned {}
 
-impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
+impl<'conn, Params, Cols, S, A> Statement<'conn, Params, Cols, S, A> {
     /// Provides access to the raw ODBC Statement Handle
     pub fn as_raw(&self) -> SQLHSTMT {
         self.handle.as_raw()
@@ -89,16 +89,15 @@ impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
     ///
     /// See [SQLBindParameter Function][1]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlbindparameter-function#columnsize-argument
-    pub fn bind_input_parameter<'p, T>(
+    pub fn bind_input_parameter<'param_new, T>(
         mut self,
         parameter_number: SQLUSMALLINT,
         parameter_type: DataType,
-        value: &'p T,
-        indicator: Option<&'p SQLLEN>,
-    ) -> Return<Statement<'con, 'p, 'col, S, A>, Self>
+        value: &'param_new RefCell<T>,
+        indicator: Option<&'param_new RefCell<SQLLEN>>,
+    ) -> Return<Statement<'conn, (&'param_new RefCell<T>, Option<&'param_new RefCell<SQLLEN>>, Params), Cols, S, A>, Self>
     where
-        T: CDataType + ?Sized,
-        'param: 'p,
+        T: CDataType + Sized,
     {
         unsafe {
             match self.handle.bind_input_parameter(
@@ -107,8 +106,8 @@ impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
                 value,
                 indicator,
             ) {
-                Success(()) => Success(self.transit()),
-                Info(()) => Info(self.transit()),
+                Success(()) => Success(self.transit_with_param(value, indicator)),
+                Info(()) => Info(self.transit_with_param(value, indicator)),
                 Error(()) => Error(self.transit()),
             }
         }
@@ -121,47 +120,109 @@ impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
     pub fn bind_col<'col_new, T>(
         mut self,
         column_number: SQLUSMALLINT,
-        value: &'col_new mut T,
-        indicator: Option<&'col_new mut SQLLEN>,
-    ) -> Return<Statement<'con, 'param, 'col_new, S, A>, Self>
+        value: &'col_new RefCell<T>,
+        indicator: Option<&'col_new RefCell<SQLLEN>>,
+    ) -> Return<Statement<'conn, Params, (&'col_new RefCell<T>, Option<&'col_new RefCell<SQLLEN>>, Cols), S, A>, Self>
     where
-        T: CDataType + ?Sized,
-        'col: 'col_new,
+        T: CDataType + Sized,
     {
         unsafe {
             match self.handle.bind_col(column_number, value, indicator) {
-                Success(()) => Success(self.transit()),
-                Info(()) => Info(self.transit()),
+                Success(()) => Success(self.transit_with_col(value, indicator)),
+                Info(()) => Info(self.transit_with_col(value, indicator)),
                 Error(()) => Error(self.transit()),
             }
         }
     }
 
     /// Unbinds the parameters from the parameter markers
-    pub fn reset_parameters(mut self) -> Statement<'con, 'static, 'col, S, A> {
+    pub fn reset_parameters(mut self) -> Statement<'conn, (), Cols, S, A> {
         self.handle.reset_parameters().unwrap();
-        self.transit()
+        Statement {
+            handle: self.handle,
+            params: (),
+            cols: self.cols,
+            cursor: PhantomData,
+            access_plan: PhantomData,
+        }
     }
 
     /// Unbinds column buffers from result set.
-    pub fn reset_columns(mut self) -> Statement<'con, 'param, 'static, S, A> {
+    pub fn reset_columns(mut self) -> Statement<'conn, Params, (), S, A> {
         self.handle.reset_columns().unwrap();
-        self.transit()
-    }
-
-    fn transit<'p, 'c, S2, A2>(self) -> Statement<'con, 'p, 'c, S2, A2> {
         Statement {
             handle: self.handle,
-            parameters: PhantomData,
-            columns: PhantomData,
+            params: self.params,
+            cols: (),
+            cursor: PhantomData,
+            access_plan: PhantomData,
+        }
+    }
+
+    fn transit<S2, A2>(self) -> Statement<'conn, Params, Cols, S2, A2> {
+        Statement {
+            handle: self.handle,
+            params: self.params,
+            cols: self.cols,
+            cursor: PhantomData,
+            access_plan: PhantomData,
+        }
+    }
+
+    fn transit_with_param<'param_new, T, S2, A2>(
+        self,
+        new_param: &'param_new RefCell<T>,
+        new_ind: Option<&'param_new RefCell<SQLLEN>>,
+    ) -> Statement<'conn, (&'param_new RefCell<T>, Option<&'param_new RefCell<SQLLEN>>, Params), Cols, S2, A2> {
+        Statement {
+            handle: self.handle,
+            params: (new_param, new_ind, self.params),
+            cols: self.cols,
+            cursor: PhantomData,
+            access_plan: PhantomData,
+        }
+    }
+
+    fn transit_with_col<'col_new, T, S2, A2>(
+        self,
+        new_col: &'col_new RefCell<T>,
+        new_ind: Option<&'col_new RefCell<SQLLEN>>,
+    ) -> Statement<'conn, Params, (&'col_new RefCell<T>, Option<&'col_new RefCell<SQLLEN>>, Cols), S2, A2> {
+        Statement {
+            handle: self.handle,
+            params: self.params,
+            cols: (new_col, new_ind, self.cols),
             cursor: PhantomData,
             access_plan: PhantomData,
         }
     }
 }
 
-impl<'con, 'param, 'col, C, A> Statement<'con, 'param, 'col, C, A>
+pub trait BorrowCols {
+    type R;
+
+    fn borrow_cols(&self) -> Self::R;
+}
+
+impl BorrowCols for () {
+    type R = ();
+
+    fn borrow_cols(&self) -> Self::R {
+        ()
+    }
+}
+
+impl<'col, T, S> BorrowCols for (&'col RefCell<T>, Option<&'col RefCell<SQLLEN>>, S) where S: BorrowCols {
+    type R = (RefMut<'col, T>, Option<RefMut<'col, SQLLEN>>, S::R);
+
+    fn borrow_cols(&self) -> Self::R {
+        (self.0.borrow_mut(), self.1.map(RefCell::borrow_mut), self.2.borrow_cols())
+    }
+}
+
+impl<'conn, Params, Cols, C, A> Statement<'conn, Params, Cols, C, A>
 where
+    Cols: BorrowCols,
     C: CursorState,
 {
     /// Returns the number of columns of the result set
@@ -181,10 +242,14 @@ where
     pub fn fetch(
         mut self,
     ) -> ReturnOption<
-        Statement<'con, 'param, 'col, Positioned, A>,
-        Statement<'con, 'param, 'col, NoCursor, A>,
+        Statement<'conn, Params, Cols, Positioned, A>,
+        Statement<'conn, Params, Cols, NoCursor, A>,
     > {
-        match self.handle.fetch() {
+        let res = {
+            let _ = self.cols.borrow_cols();
+            self.handle.fetch()
+        };
+        match res {
             ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
             ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
             ReturnOption::NoData(()) => ReturnOption::NoData(self.transit()),
@@ -202,7 +267,7 @@ where
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/closing-the-cursor
     pub fn close_cursor(
         mut self,
-    ) -> Return<Statement<'con, 'param, 'col, NoCursor>, Statement<'con, 'param, 'col, C, A>> {
+    ) -> Return<Statement<'conn, Params, Cols, NoCursor, A>, Statement<'conn, Params, Cols, C, A>> {
         match self.handle.close_cursor() {
             Success(()) => Success(self.transit()),
             Info(()) => Info(self.transit()),
@@ -239,20 +304,47 @@ where
     }
 }
 
-impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
+impl<'conn> Statement<'conn, (), (), NoCursor, Unprepared> {
     /// Allocates a new `Statement`
-    pub fn with_parent(parent: &'con Connection) -> Return<Self> {
+    pub fn with_parent(parent: &'conn Connection) -> Return<Self> {
         HStmt::allocate(parent.as_hdbc()).map(|handle| {
             Statement {
                 handle,
-                parameters: PhantomData,
+                params: (),
+                cols: (),
                 cursor: PhantomData,
-                columns: PhantomData,
                 access_plan: PhantomData,
             }
         })
     }
+}
 
+pub trait BorrowParams {
+    type R;
+
+    fn borrow_params(&self) -> Self::R;
+}
+
+impl BorrowParams for () {
+    type R = ();
+
+    fn borrow_params(&self) -> Self::R {
+        ()
+    }
+}
+
+impl<'param, T, S> BorrowParams for (&'param RefCell<T>, Option<&'param RefCell<SQLLEN>>, S) where S: BorrowParams {
+    type R = (Ref<'param, T>, Option<Ref<'param, SQLLEN>>, S::R);
+
+    fn borrow_params(&self) -> Self::R {
+        (self.0.borrow(), self.1.map(RefCell::borrow), self.2.borrow_params())
+    }
+}
+
+impl<'conn, Params, Cols> Statement<'conn, Params, Cols, NoCursor, Unprepared>
+where
+    Params: BorrowParams
+{
     /// Prepares a `Statement` for execution by creating an Access Plan.
     ///
     /// See [SQLPrepare Function][1]
@@ -263,8 +355,8 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
         mut self,
         statement_text: &T,
     ) -> Return<
-        Statement<'con, 'param, 'col, NoCursor, Prepared>,
-        Statement<'con, 'param, 'col, NoCursor>,
+        Statement<'conn, Params, Cols, NoCursor, Prepared>,
+        Statement<'conn, Params, Cols, NoCursor>,
     >
     where
         T: SqlStr + ?Sized,
@@ -295,13 +387,17 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
         mut self,
         statement_text: &T,
     ) -> ReturnOption<
-        ResultSet<'con, 'param, 'col, Unprepared>,
-        Statement<'con, 'param, 'col, NoCursor>,
+        ResultSet<'conn, Params, Cols, Unprepared>,
+        Statement<'conn, Params, Cols, NoCursor>,
     >
     where
         T: SqlStr + ?Sized,
     {
-        match self.handle.exec_direct(statement_text) {
+        let res = {
+            let _ = self.params.borrow_params();
+            self.handle.exec_direct(statement_text)
+        };
+        match res {
             ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
             ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
             ReturnOption::NoData(()) => ReturnOption::NoData(self.transit()),
@@ -310,7 +406,10 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Unprepared> {
     }
 }
 
-impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Prepared> {
+impl<'conn, Params, Cols> Statement<'conn, Params, Cols, NoCursor, Prepared>
+where
+    Params: BorrowParams
+{
     /// Return information about result set column
     ///
     /// See [SQLDescribeCol Function][1]
@@ -347,8 +446,12 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Prepared> {
     /// See [Prepared Execution][2]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlexecute-function
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/develop-app/prepared-execution-odbc
-    pub fn execute(mut self) -> ReturnOption<ResultSet<'con, 'param, 'col, Prepared>, Self> {
-        match self.handle.execute() {
+    pub fn execute(mut self) -> ReturnOption<ResultSet<'conn, Params, Cols, Prepared>, Self> {
+        let res = {
+            let _ = self.params.borrow_params();
+            self.handle.execute()
+        };
+        match res {
             ReturnOption::Success(()) => ReturnOption::Success(self.transit()),
             ReturnOption::Info(()) => ReturnOption::Info(self.transit()),
             ReturnOption::Error(()) => ReturnOption::Error(self.transit()),
@@ -357,7 +460,7 @@ impl<'con, 'param, 'col> Statement<'con, 'param, 'col, NoCursor, Prepared> {
     }
 }
 
-impl<'con, 'param, 'col, A> Statement<'con, 'param, 'col, Positioned, A> {
+impl<'conn, Params, Cols, A> Statement<'conn, Params, Cols, Positioned, A> {
     /// Retrieves data for a single column or output parameter.
     ///
     /// See [SQLGetData][1]
@@ -374,7 +477,7 @@ impl<'con, 'param, 'col, A> Statement<'con, 'param, 'col, Positioned, A> {
     }
 }
 
-impl<'con, 'param, 'col, C, A> Diagnostics for Statement<'con, 'param, 'col, C, A> {
+impl<'conn, Params, Cols, C, A> Diagnostics for Statement<'conn, Params, Cols, C, A> {
     fn diagnostics(
         &self,
         rec_number: SQLSMALLINT,

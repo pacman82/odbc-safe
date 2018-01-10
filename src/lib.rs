@@ -50,4 +50,4 @@ mod output_buffer;
 /// `Connection` can be used as a shorthand for a `DataSource` in `Connected` state.
 pub type Connection<'env> = DataSource<'env, Connected<'env>>;
 /// Shorthand for `Statements` in `Open` state.
-pub type ResultSet<'con, 'param, 'col, P> = Statement<'con, 'param, 'col, Open, P>;
+pub type ResultSet<'conn, Params, Cols, P> = Statement<'conn, Params, Cols, Open, P>;

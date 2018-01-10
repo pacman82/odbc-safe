@@ -68,7 +68,7 @@ where
     conn.connect("TestDataSource", "", "").into_result()
 }
 
-fn execute_query<'a>(conn: &'a Connection) -> MyResult<ResultSet<'a, 'a, 'a, Unprepared>> {
+fn execute_query<'a>(conn: &'a Connection) -> MyResult<ResultSet<'a, (), (), Unprepared>> {
     let stmt = Statement::with_parent(conn).unwrap();
     match stmt.exec_direct("SELECT * FROM MOVIES") {
         ReturnOption::Success(s) |
@@ -80,7 +80,7 @@ fn execute_query<'a>(conn: &'a Connection) -> MyResult<ResultSet<'a, 'a, 'a, Unp
     }
 }
 
-fn print_fields(result_set: ResultSet<Unprepared>) -> MyResult<()> {
+fn print_fields(result_set: ResultSet<(), (), Unprepared>) -> MyResult<()> {
     let cols = result_set.num_result_cols().unwrap();
     let mut buffer = [0u8; 512];
     let mut cursor = match result_set.fetch() {

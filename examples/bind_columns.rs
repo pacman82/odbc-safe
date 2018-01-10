@@ -4,6 +4,7 @@ extern crate odbc_sys;
 use odbc_safe::*;
 use odbc_sys::SQLLEN;
 use std::str::from_utf8;
+use std::cell::RefCell;
 
 // Setup error handling
 struct LastError(String);
@@ -68,7 +69,7 @@ where
     conn.connect("TestDataSource", "", "").into_result()
 }
 
-fn execute_query<'a>(conn: &'a Connection) -> MyResult<ResultSet<'a, 'a, 'a, Unprepared>> {
+fn execute_query<'a>(conn: &'a Connection) -> MyResult<ResultSet<'a, (), (), Unprepared>> {
     let stmt = Statement::with_parent(conn).unwrap();
     match stmt.exec_direct("SELECT year, title FROM Movies") {
         ReturnOption::Success(s) |
@@ -80,42 +81,42 @@ fn execute_query<'a>(conn: &'a Connection) -> MyResult<ResultSet<'a, 'a, 'a, Unp
     }
 }
 
-fn print_fields(result_set: ResultSet<Unprepared>) -> MyResult<()> {
-    let mut year = 0;
-    let mut title = [0u8; 512];
-    let mut ind_year = 0;
-    let mut ind_title = 0;
+fn print_fields(result_set: ResultSet<(), (), Unprepared>) -> MyResult<()> {
+    let year = RefCell::new(0);
+    let title = RefCell::new([0u8; 512]);
+    let ind_year = RefCell::new(0);
+    let ind_title = RefCell::new(0);
     let mut cursor_opt = fetch(
         result_set,
-        &mut year,
-        &mut title,
-        &mut ind_year,
-        &mut ind_title,
+        &year,
+        &title,
+        &ind_year,
+        &ind_title,
     )?;
     while let Some(p) = cursor_opt {
         println!(
             "year: {}, title: {}",
-            year,
-            from_utf8(&title[0..(ind_title as usize)]).unwrap()
+            year.borrow(),
+            from_utf8(&title.borrow()[0..(*ind_title.borrow() as usize)]).unwrap()
         );
-        cursor_opt = fetch(p, &mut year, &mut title, &mut ind_year, &mut ind_title)?
+        cursor_opt = fetch(p, &year, &title, &ind_year, &ind_title)?
     }
     Ok(())
 }
 
-fn fetch<'con, 'p, 'c, C>(
-    cursor: Statement<'con, 'p, 'c, C>,
-    year: &mut u32,
-    title: &mut [u8],
-    ind_year: &mut SQLLEN,
-    ind_title: &mut SQLLEN,
-) -> MyResult<Option<Statement<'con, 'p, 'c, Positioned>>>
+fn fetch<'con, C>(
+    cursor: Statement<'con, (), (), C>,
+    year: &RefCell<u32>,
+    title: &RefCell<[u8; 512]>,
+    ind_year: &RefCell<SQLLEN>,
+    ind_title: &RefCell<SQLLEN>,
+) -> MyResult<Option<Statement<'con, (), (), Positioned>>>
 where
     C: CursorState,
 {
     use ReturnOption::*;
     let cursor = cursor.bind_col(1, year, Some(ind_year)).into_result()?;
-    let cursor = cursor.bind_col(2, &mut title[..], Some(ind_title)).into_result()?;
+    let cursor = cursor.bind_col(2, title, Some(ind_title)).into_result()?;
     let cursor = match cursor.fetch() {
         Success(s) | Info(s) => Some(s.reset_columns()),
         NoData(_) => None,

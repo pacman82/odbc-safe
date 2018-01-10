@@ -1,6 +1,8 @@
 extern crate odbc_safe;
 extern crate odbc_sys;
 
+use std::cell::RefCell;
+
 use odbc_safe::*;
 
 #[test]
@@ -176,6 +178,101 @@ fn not_read_only() {
     let dbc = DataSource::with_parent(&env).unwrap();
     let mut dbc = dbc.connect("PostgreSQL", "postgres", "").unwrap();
     assert!(!dbc.is_read_only().unwrap());
+}
+
+#[cfg_attr(not(feature = "travis"), ignore)]
+#[test]
+fn reuse_param_col_bindings() {
+    let env = Environment::new().unwrap();
+    let env: Environment<Odbc3> = env.declare_version().unwrap();
+    let dbc = DataSource::with_parent(&env).unwrap();
+    let dbc = dbc.connect("PostgreSQL", "postgres", "").unwrap();
+    {
+        let stmt = Statement::with_parent(&dbc).unwrap();
+        match stmt.exec_direct( "CREATE TEMPORARY TABLE tbl (x INT NOT NULL, y INT NOT NULL, z INT NOT NULL);" ) {
+            ReturnOption::Success(s) |
+            ReturnOption::Info(s) => {
+                assert_no_diagnostic(&s);
+            }
+            ReturnOption::NoData(s) => {
+                assert_no_diagnostic(&s);
+            }
+            ReturnOption::Error(s) => panic!("{}", get_last_error(&s)),
+        };
+    }
+    {
+        let x: RefCell<i32> = RefCell::new(0);
+        let y: RefCell<i32> = RefCell::new(0);
+        let z: RefCell<i32> = RefCell::new(0);
+
+        let stmt = Statement::with_parent(&dbc).unwrap();
+        let stmt = stmt.prepare("INSERT INTO tbl (x,y,z) VALUES (?,?,?);").unwrap();
+        let stmt = stmt.bind_input_parameter(1, DataType::Integer, &x, None).unwrap();
+        let stmt = stmt.bind_input_parameter(2, DataType::Integer, &y, None).unwrap();
+        let stmt = stmt.bind_input_parameter(3, DataType::Integer, &z, None).unwrap();
+
+        let mut stmt = match stmt.execute() {
+            ReturnOption::Success(s) | ReturnOption::Info(s) => s.close_cursor().unwrap(),
+            ReturnOption::Error(s) | ReturnOption::NoData(s) => {
+                panic!("Error executing INSERT: {}", get_last_error(&s));
+            },
+        };
+
+        for i in 1..128 {
+            *x.borrow_mut() = i;
+            *y.borrow_mut() = 2*i;
+            *z.borrow_mut() = 3*i;
+
+            stmt = match stmt.execute() {
+                ReturnOption::Success(s) | ReturnOption::Info(s) => s.close_cursor().unwrap(),
+                ReturnOption::Error(s) | ReturnOption::NoData(s) => {
+                    panic!("Error executing INSERT: {}", get_last_error(&s));
+                },
+            };
+        }
+    }
+    {
+        let mut rows: usize = 0;
+        let x: RefCell<i32> = RefCell::new(0);
+        let y: RefCell<i32> = RefCell::new(0);
+        let z: RefCell<i32> = RefCell::new(0);
+
+        let stmt = Statement::with_parent(&dbc).unwrap();
+        let stmt = stmt.bind_col(1, &x, None).unwrap();
+        let stmt = stmt.bind_col(2, &y, None).unwrap();
+        let stmt = stmt.bind_col(3, &z, None).unwrap();
+        let stmt = match stmt.exec_direct("SELECT x,y,z FROM tbl") {
+            ReturnOption::Success(s) |
+            ReturnOption::Info(s) => {
+                assert_no_diagnostic(&s);
+                s
+            }
+            ReturnOption::NoData(_) => panic!("No Data"),
+            ReturnOption::Error(s) => panic!("{}", get_last_error(&s)),
+        };
+        assert_eq!(3, stmt.num_result_cols().unwrap());
+        let mut stmt = match stmt.fetch() {
+            ReturnOption::Success(s) | ReturnOption::Info(s) => s,
+            ReturnOption::Error(s) => panic!("Error during fetching row: {}", get_last_error(&s)),
+            ReturnOption::NoData(_) => panic!("Empty result set returned from SELECT"),
+        };
+        loop {
+            rows += 1;
+            let x = *x.borrow();
+            let y = *y.borrow();
+            let z = *z.borrow();
+            assert_eq!( 2 * x, y );
+            assert_eq!( 3 * x, z );
+
+            stmt = match stmt.fetch() {
+                ReturnOption::Success(s) | ReturnOption::Info(s) => s,
+                ReturnOption::Error(s) => panic!("Error during fetching row: {}", get_last_error(&s)),
+                ReturnOption::NoData(_) => break,
+            };
+        }
+        assert_eq!( 128, rows );
+    }
+    dbc.disconnect().unwrap();
 }
 
 /// Checks for a diagnstic record. Should one be present this function panics printing the contents

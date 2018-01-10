@@ -43,6 +43,25 @@ unsafe impl CDataType for [SQLCHAR] {
     }
 }
 
+// HACK: TODO: Rust does not seem to support generics over the array size, c.f. RFC 2000 and tracking issue #44580. How to handle a RefCell<[T; N]> then? Require usage of generic_array?
+unsafe impl CDataType for [SQLCHAR; 512] {
+    fn c_data_type() -> SqlCDataType {
+        SQL_C_BINARY
+    }
+
+    fn sql_ptr(&self) -> *const c_void {
+        self.as_ptr() as SQLPOINTER
+    }
+
+    fn mut_sql_ptr(&mut self) -> SQLPOINTER {
+        self.as_mut_ptr() as SQLPOINTER
+    }
+
+    fn buffer_len(&self) -> SQLLEN {
+        self.buf_len()
+    }
+}
+
 unsafe impl CDataType for SQLSMALLINT {
     fn c_data_type() -> SqlCDataType {
         SQL_C_SSHORT

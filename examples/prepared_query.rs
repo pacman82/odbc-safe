@@ -2,6 +2,7 @@
 extern crate odbc_safe;
 use odbc_safe::*;
 use std::str::from_utf8;
+use std::cell::RefCell;
 
 fn main() {
 
@@ -10,7 +11,8 @@ fn main() {
     let conn = connect(&env);
     let mut stmt = prepare_query(&conn);
     for &year in [1968, 1993].iter() {
-        let result_set = execute_query(stmt, year);
+        let year = RefCell::new(year);
+        let result_set = execute_query(stmt, &year);
         stmt = print_fields(result_set);
         println!("");
     }
@@ -24,16 +26,16 @@ where
     conn.connect("TestDataSource", "", "").unwrap()
 }
 
-fn prepare_query<'a>(conn: &'a Connection) -> Statement<'a, 'a, 'a, NoCursor, Prepared> {
+fn prepare_query<'a>(conn: &'a Connection) -> Statement<'a, (), (), NoCursor, Prepared> {
     let stmt = Statement::with_parent(conn).unwrap();
     stmt.prepare("SELECT TITLE FROM MOVIES WHERE YEAR = ?")
         .unwrap()
 }
 
 fn execute_query<'a>(
-    stmt: Statement<'a, 'a, 'a, NoCursor, Prepared>,
-    year: i32,
-) -> ResultSet<'a, 'a, 'a, Prepared> {
+    stmt: Statement<'a, (), (), NoCursor, Prepared>,
+    year: &RefCell<i32>,
+) -> ResultSet<'a, (), (), Prepared> {
     let stmt = stmt.bind_input_parameter(1, DataType::Integer, &year, None)
         .unwrap();
     let stmt = match stmt.execute() {
@@ -46,8 +48,8 @@ fn execute_query<'a>(
 }
 
 fn print_fields<'a>(
-    result_set: ResultSet<'a, 'a, 'a, Prepared>,
-) -> Statement<'a, 'a, 'a, NoCursor, Prepared> {
+    result_set: ResultSet<'a, (), (), Prepared>,
+) -> Statement<'a, (), (), NoCursor, Prepared> {
     let mut buffer = [0u8; 512];
     let mut cursor = match result_set.fetch() {
         ReturnOption::Success(r) |

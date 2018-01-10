@@ -2,6 +2,7 @@ use super::*;
 use sys::*;
 use std::marker::PhantomData;
 use std::ptr::{null, null_mut};
+use std::cell::RefCell;
 use std::thread::panicking;
 
 #[derive(Debug)]
@@ -112,16 +113,17 @@ impl<'env, 'param> HStmt<'env> {
         &mut self,
         parameter_number: SQLUSMALLINT,
         parameter_type: DataType,
-        value: &T,
-        indicator: Option<&SQLLEN>
+        value: &RefCell<T>,
+        indicator: Option<&RefCell<SQLLEN>>
     ) -> Return<()>
     where
         T: CDataType + ?Sized,
     {
-        let indicator: *const SQLLEN = match indicator {
-            Some(indicator) => indicator,
-            None => null(),
-        };
+        let value: &T = &value.borrow();
+        let indicator: *const SQLLEN = indicator.map_or(null(), |indicator| {
+            let indicator: &SQLLEN = &indicator.borrow();
+            indicator
+        });
         SQLBindParameter(
             self.handle,
             parameter_number,
@@ -168,16 +170,17 @@ impl<'env, 'param> HStmt<'env> {
     pub unsafe fn bind_col<T>(
         &mut self,
         column_number: SQLUSMALLINT,
-        value: &mut T,
-        indicator: Option<&mut SQLLEN>,
+        value: &RefCell<T>,
+        indicator: Option<&RefCell<SQLLEN>>,
     ) -> Return<()>
     where
         T: CDataType + ?Sized,
     {
-        let indicator: *mut SQLLEN = match indicator {
-            Some(indicator) => indicator,
-            None => null_mut(),
-        };
+        let value: &mut T = &mut value.borrow_mut();
+        let indicator: *mut SQLLEN = indicator.map_or(null_mut(), |indicator| {
+            let indicator: &mut SQLLEN = &mut indicator.borrow_mut();
+            indicator
+        });
         SQLBindCol(
             self.handle,
             column_number,
