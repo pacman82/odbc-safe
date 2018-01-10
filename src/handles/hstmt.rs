@@ -1,7 +1,7 @@
 use super::*;
 use sys::*;
 use std::marker::PhantomData;
-use std::ptr::null_mut;
+use std::ptr::{null, null_mut};
 use std::thread::panicking;
 
 #[derive(Debug)]
@@ -112,15 +112,15 @@ impl<'env, 'param> HStmt<'env> {
         &mut self,
         parameter_number: SQLUSMALLINT,
         parameter_type: DataType,
-        value: Option<&T>,
+        value: &T,
+        indicator: Option<&SQLLEN>
     ) -> Return<()>
     where
         T: CDataType + ?Sized,
     {
-        let mut indicator = if let Some(v) = value {
-            v.buffer_len()
-        } else {
-            SQL_NULL_DATA
+        let indicator: *const SQLLEN = match indicator {
+            Some(indicator) => indicator,
+            None => null(),
         };
         SQLBindParameter(
             self.handle,
@@ -130,9 +130,9 @@ impl<'env, 'param> HStmt<'env> {
             parameter_type.sql_data_type(),
             parameter_type.column_size(),
             parameter_type.decimal_digits(),
-            value.map_or(null_mut(), |v| v.sql_ptr() as SQLPOINTER),
+            value.sql_ptr() as SQLPOINTER,
             0,
-            &mut indicator,
+            indicator as *mut SQLLEN,
         ).into()
     }
 
@@ -169,11 +169,15 @@ impl<'env, 'param> HStmt<'env> {
         &mut self,
         column_number: SQLUSMALLINT,
         value: &mut T,
-        indicator: &mut SQLLEN,
+        indicator: Option<&mut SQLLEN>,
     ) -> Return<()>
     where
         T: CDataType + ?Sized,
     {
+        let indicator: *mut SQLLEN = match indicator {
+            Some(indicator) => indicator,
+            None => null_mut(),
+        };
         SQLBindCol(
             self.handle,
             column_number,

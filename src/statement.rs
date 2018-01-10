@@ -93,7 +93,8 @@ impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
         mut self,
         parameter_number: SQLUSMALLINT,
         parameter_type: DataType,
-        value: Option<&'p T>,
+        value: &'p T,
+        indicator: Option<&'p SQLLEN>,
     ) -> Return<Statement<'con, 'p, 'col, S, A>, Self>
     where
         T: CDataType + ?Sized,
@@ -104,6 +105,7 @@ impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
                 parameter_number,
                 parameter_type,
                 value,
+                indicator,
             ) {
                 Success(()) => Success(self.transit()),
                 Info(()) => Info(self.transit()),
@@ -120,7 +122,7 @@ impl<'con, 'param, 'col, S, A> Statement<'con, 'param, 'col, S, A> {
         mut self,
         column_number: SQLUSMALLINT,
         value: &'col_new mut T,
-        indicator: &'col_new mut SQLLEN,
+        indicator: Option<&'col_new mut SQLLEN>,
     ) -> Return<Statement<'con, 'param, 'col_new, S, A>, Self>
     where
         T: CDataType + ?Sized,
@@ -372,7 +374,7 @@ impl<'con, 'param, 'col, A> Statement<'con, 'param, 'col, Positioned, A> {
     }
 }
 
-impl<'con, 'param, 'col, C> Diagnostics for Statement<'con, 'param, 'col, C> {
+impl<'con, 'param, 'col, C, A> Diagnostics for Statement<'con, 'param, 'col, C, A> {
     fn diagnostics(
         &self,
         rec_number: SQLSMALLINT,
