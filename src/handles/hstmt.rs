@@ -119,7 +119,10 @@ impl<'env, 'param> HStmt<'env> {
         T: CDataType + ?Sized,
     {
         let indicator: *const SQLLEN = match indicator {
-            Some(indicator) => indicator,
+            Some(indicator) => {
+                assert!(*indicator <= value.buffer_len(), "Indicator cannot be larger than buffer length.");
+                indicator
+            }
             None => null(),
         };
         SQLBindParameter(
