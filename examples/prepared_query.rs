@@ -34,7 +34,7 @@ fn execute_query<'a>(
     stmt: Statement<'a, 'a, 'a, NoCursor, Prepared>,
     year: i32,
 ) -> ResultSet<'a, 'a, 'a, Prepared> {
-    let stmt = stmt.bind_input_parameter(1, DataType::Integer, Some(&year))
+    let stmt = stmt.bind_input_parameter(1, DataType::Integer, &year, None)
         .unwrap();
     let stmt = match stmt.execute() {
         ReturnOption::Success(s) |

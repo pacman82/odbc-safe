@@ -114,8 +114,8 @@ where
     C: CursorState,
 {
     use ReturnOption::*;
-    let cursor = cursor.bind_col(1, year, ind_year).into_result()?;
-    let cursor = cursor.bind_col(2, &mut title[..], ind_title).into_result()?;
+    let cursor = cursor.bind_col(1, year, Some(ind_year)).into_result()?;
+    let cursor = cursor.bind_col(2, &mut title[..], Some(ind_title)).into_result()?;
     let cursor = match cursor.fetch() {
         Success(s) | Info(s) => Some(s.reset_columns()),
         NoData(_) => None,
