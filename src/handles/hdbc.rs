@@ -126,6 +126,26 @@ impl<'env> HDbc<'env> {
         unsafe { SQLDisconnect(self.handle).into() }
     }
 
+    pub fn set_autocommit(&mut self, enabled: bool) -> Return<()> {
+        let val = if enabled { 1u32 } else { 0u32 };
+        unsafe {
+            SQLSetConnectAttr(
+                self.handle,
+                SQL_ATTR_AUTOCOMMIT,
+                val as SQLPOINTER,
+                0 // will be ignored according to ODBC spec
+            ).into()
+        }
+    }
+
+    pub fn commit(&mut self) -> Return<()> {
+        unsafe {  SQLEndTran(SQL_HANDLE_DBC, self.handle as *mut Obj, SQL_COMMIT).into() }
+    }
+
+    pub fn rollback(&mut self) -> Return<()> {
+        unsafe { SQLEndTran(SQL_HANDLE_DBC, self.handle as *mut Obj, SQL_ROLLBACK).into() }
+    }
+
     /// Returns wether the data source is read only
     pub fn is_read_only(&mut self) -> Return<bool> {
         unsafe {

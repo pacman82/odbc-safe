@@ -10,6 +10,13 @@ pub struct Connected<'env>(HDbc<'env>);
 
 impl<'env> Drop for Connected<'env> {
     fn drop(&mut self) {
+        match self.0.rollback() {
+            Success(()) | Info(()) => {},
+            Error(()) => if !panicking() {
+                panic!("SQLEndTran returned error")
+            },
+        };
+
         match self.0.disconnect() {
             Success(()) | Info(()) => (),
             Error(()) => if !panicking() {

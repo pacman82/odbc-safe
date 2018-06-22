@@ -29,6 +29,7 @@ mod hdbc_wrapper;
 pub struct DataSource<'env, S: HDbcWrapper<'env> = Unconnected<'env>> {
     /// Connection handle. Either `HDbc` for `Unconnected` or `Connected` for `Connected`.
     handle: S::Handle,
+    autocommit: bool
 }
 
 impl<'env, Any> DataSource<'env, Any>
@@ -53,13 +54,31 @@ where
     /// `SQLAllocHandle`. Special care must be taken that the Connection Handle passed is in a
     /// State which matches the type.
     pub unsafe fn from_raw(raw: SQLHDBC) -> Self {
-        DataSource { handle: Any::from_hdbc(HDbc::from_raw(raw)) }
+        DataSource { handle: Any::from_hdbc(HDbc::from_raw(raw)), autocommit: true }
     }
 
     /// Express state transiton
     fn transit<Other: HDbcWrapper<'env>>(self) -> DataSource<'env, Other> {
-        DataSource { handle: Other::from_hdbc(self.handle.into_hdbc()) }
+        DataSource { handle: Other::from_hdbc(self.handle.into_hdbc()), autocommit: self.autocommit }
     }
+
+    /// Check if connection is in autocommit mode
+    pub fn is_autocommit(&self) -> bool {
+        self.autocommit
+    }
+
+    /// Set autocommit mode on/off
+    pub fn set_autocommit(&mut self, enabled: bool) -> Return<()> {
+        let result: Return<()> = self.handle.set_autocommit(enabled);
+
+        self.autocommit = match result {
+            Success(()) | Info(())  => enabled,
+            Error(()) => self.autocommit,
+        };
+
+        result
+    }
+
 }
 
 impl<'env> DataSource<'env, Unconnected<'env>> {
@@ -72,7 +91,7 @@ impl<'env> DataSource<'env, Unconnected<'env>> {
         V: Version,
     {
         HDbc::allocate(parent.as_henv()).map(|handle| {
-            DataSource { handle: Unconnected::from_hdbc(handle) }
+            DataSource { handle: Unconnected::from_hdbc(handle), autocommit: true }
         })
     }
 
@@ -161,6 +180,24 @@ impl<'env> Connection<'env> {
             Success(()) => Success(self.transit()),
             Info(()) => Info(self.transit()),
             Error(()) => Error(self.transit()),
+        }
+    }
+
+    /// Commit transaction if any, can be safely called and will be no-op if no transaction present or autocommit mode is enabled
+    pub fn commit(&mut self) -> Return<()> {
+        if !self.autocommit {
+            self.handle.commit()
+        } else {
+            Success(())
+        }
+    }
+
+    /// Rollback transaction if any, can be safely called and will be no-op if no transaction present or autocommit mode is enabled
+    pub fn rollback(&mut self) -> Return<()> {
+        if !self.autocommit {
+            self.handle.rollback()
+        } else {
+            Success(())
         }
     }
 
