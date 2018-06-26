@@ -1,4 +1,4 @@
-pub use self::connected::Connected;
+pub use self::connected::{Connected, AutocommitOff, AutocommitOn, AutocommitMode};
 pub use self::hdbc_wrapper::HDbcWrapper;
 pub use self::unconnected::Unconnected;
 use super::*;
@@ -28,8 +28,7 @@ mod hdbc_wrapper;
 #[derive(Debug)]
 pub struct DataSource<'env, S: HDbcWrapper<'env> = Unconnected<'env>> {
     /// Connection handle. Either `HDbc` for `Unconnected` or `Connected` for `Connected`.
-    handle: S::Handle,
-    autocommit: bool
+    handle: S::Handle
 }
 
 impl<'env, Any> DataSource<'env, Any>
@@ -54,31 +53,13 @@ where
     /// `SQLAllocHandle`. Special care must be taken that the Connection Handle passed is in a
     /// State which matches the type.
     pub unsafe fn from_raw(raw: SQLHDBC) -> Self {
-        DataSource { handle: Any::from_hdbc(HDbc::from_raw(raw)), autocommit: true }
+        DataSource { handle: Any::from_hdbc(HDbc::from_raw(raw)) }
     }
 
     /// Express state transiton
     fn transit<Other: HDbcWrapper<'env>>(self) -> DataSource<'env, Other> {
-        DataSource { handle: Other::from_hdbc(self.handle.into_hdbc()), autocommit: self.autocommit }
+        DataSource { handle: Other::from_hdbc(self.handle.into_hdbc()) }
     }
-
-    /// Check if connection is in autocommit mode
-    pub fn is_autocommit(&self) -> bool {
-        self.autocommit
-    }
-
-    /// Set autocommit mode on/off
-    pub fn set_autocommit(&mut self, enabled: bool) -> Return<()> {
-        let result: Return<()> = self.handle.set_autocommit(enabled);
-
-        self.autocommit = match result {
-            Success(()) | Info(())  => enabled,
-            Error(()) => self.autocommit,
-        };
-
-        result
-    }
-
 }
 
 impl<'env> DataSource<'env, Unconnected<'env>> {
@@ -91,7 +72,7 @@ impl<'env> DataSource<'env, Unconnected<'env>> {
         V: Version,
     {
         HDbc::allocate(parent.as_henv()).map(|handle| {
-            DataSource { handle: Unconnected::from_hdbc(handle), autocommit: true }
+            DataSource { handle: Unconnected::from_hdbc(handle) }
         })
     }
 
@@ -120,7 +101,7 @@ impl<'env> DataSource<'env, Unconnected<'env>> {
         data_source_name: &DSN,
         user: &U,
         pwd: &P,
-    ) -> Return<Connection<'env>, DataSource<'env, Unconnected<'env>>>
+    ) -> Return<Connection<'env, AutocommitOn>, DataSource<'env, Unconnected<'env>>>
     where
         DSN: SqlStr + ?Sized,
         U: SqlStr + ?Sized,
@@ -144,7 +125,7 @@ impl<'env> DataSource<'env, Unconnected<'env>> {
     pub fn connect_with_connection_string<C>(
         mut self,
         connection_string: &C,
-    ) -> Return<Connection<'env>, Self>
+    ) -> Return<Connection<'env, AutocommitOn>, Self>
     where
         C: SqlStr + ?Sized,
     {
@@ -162,7 +143,7 @@ impl<'env> DataSource<'env, Unconnected<'env>> {
     }
 }
 
-impl<'env> Connection<'env> {
+impl<'env, AC: AutocommitMode> Connection<'env, AC> {
     /// Used by `Statement`s constructor
     pub(crate) fn as_hdbc(&self) -> &HDbc {
         &self.handle
@@ -171,11 +152,18 @@ impl<'env> Connection<'env> {
     /// When an application has finished using a data source, it calls `disconnect`. `disconnect`
     /// disconnects the driver from the data source.
     ///
+    /// This will trigger implicit rollback if autocommit mode is off and current transaction was not committed nor rolled back.
+    ///
     /// * See [Disconnecting from a Data Source or Driver][1]
     /// * See [SQLDisconnect Function][2]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/disconnecting-from-a-data-source-or-driver
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldisconnect-function
-    pub fn disconnect(mut self) -> Return<DataSource<'env, Unconnected<'env>>, Connection<'env>> {
+    pub fn disconnect(mut self) -> Return<DataSource<'env, Unconnected<'env>>, Connection<'env, AC>> {
+        match self.handle.rollback() {
+            Success(()) | Info(()) => (),
+            Error(()) => return Error(self.transit()),
+        };
+
         match self.handle.disconnect() {
             Success(()) => Success(self.transit()),
             Info(()) => Info(self.transit()),
@@ -183,27 +171,46 @@ impl<'env> Connection<'env> {
         }
     }
 
+    /// `true` if the data source is set to READ ONLY mode, `false` otherwise.
+    pub fn is_read_only(&mut self) -> Return<bool> {
+        self.handle.is_read_only()
+    }
+}
+
+impl<'env> Connection<'env, AutocommitOff> {
+    /// Set autocommit mode off, triggers implicit rollback of any running transaction
+    pub fn enable_autocommit(mut self) -> Return<Connection<'env, AutocommitOn>, Self> {
+        match self.handle.rollback() {
+            Success(_) | Info(_) => {},
+            Error(()) => return Error(self.transit()),
+        };
+
+        match self.handle.set_autocommit(true) {
+            Success(_) => Success(self.transit()),
+            Info(_) => Info(self.transit()),
+            Error(()) => Error(self.transit()),
+        }
+    }
+
     /// Commit transaction if any, can be safely called and will be no-op if no transaction present or autocommit mode is enabled
     pub fn commit(&mut self) -> Return<()> {
-        if !self.autocommit {
-            self.handle.commit()
-        } else {
-            Success(())
-        }
+        self.handle.commit()
     }
 
     /// Rollback transaction if any, can be safely called and will be no-op if no transaction present or autocommit mode is enabled
     pub fn rollback(&mut self) -> Return<()> {
-        if !self.autocommit {
-            self.handle.rollback()
-        } else {
-            Success(())
-        }
+       self.handle.rollback()
     }
+}
 
-    /// `true` if the data source is set to READ ONLY mode, `false` otherwise.
-    pub fn is_read_only(&mut self) -> Return<bool> {
-        self.handle.is_read_only()
+impl<'env> Connection<'env, AutocommitOn> {
+    /// Set autocommit mode off
+    pub fn disable_autocommit(mut self) -> Return<Connection<'env, AutocommitOff>, Self> {
+        match self.handle.set_autocommit(false) {
+            Success(_) => Success(self.transit()),
+            Info(_) => Info(self.transit()),
+            Error(()) => Error(self.transit()),
+        }
     }
 }
 

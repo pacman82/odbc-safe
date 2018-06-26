@@ -60,7 +60,7 @@ fn run(env: &Environment<Odbc3>) -> MyResult<()> {
     print_fields(result_set)
 }
 
-fn connect<V>(env: &Environment<V>) -> MyResult<Connection>
+fn connect<V>(env: &Environment<V>) -> MyResult<Connection<impl AutocommitMode>>
 where
     V: Version,
 {
@@ -68,7 +68,7 @@ where
     conn.connect("TestDataSource", "", "").into_result()
 }
 
-fn execute_query<'a>(conn: &'a Connection) -> MyResult<ResultSet<'a, 'a, 'a, Unprepared>> {
+fn execute_query<'a, AC: AutocommitMode>(conn: &'a Connection<AC>) -> MyResult<ResultSet<'a, 'a, 'a, Unprepared>> {
     let stmt = Statement::with_parent(conn).unwrap();
     match stmt.exec_direct("SELECT year, title FROM Movies") {
         ReturnOption::Success(s) |

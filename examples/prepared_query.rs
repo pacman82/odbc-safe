@@ -16,7 +16,7 @@ fn main() {
     }
 }
 
-fn connect<V>(env: &Environment<V>) -> Connection
+fn connect<V>(env: &Environment<V>) -> Connection<impl AutocommitMode>
 where
     V: Version,
 {
@@ -24,7 +24,7 @@ where
     conn.connect("TestDataSource", "", "").unwrap()
 }
 
-fn prepare_query<'a>(conn: &'a Connection) -> Statement<'a, 'a, 'a, NoCursor, Prepared> {
+fn prepare_query<'a, AC: AutocommitMode>(conn: &'a Connection<AC>) -> Statement<'a, 'a, 'a, NoCursor, Prepared> {
     let stmt = Statement::with_parent(conn).unwrap();
     stmt.prepare("SELECT TITLE FROM MOVIES WHERE YEAR = ?")
         .unwrap()

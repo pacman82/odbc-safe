@@ -16,7 +16,7 @@
 pub extern crate odbc_sys as sys;
 
 pub use c_data_type::CDataType;
-pub use data_source::{HDbcWrapper, DataSource, Unconnected, Connected};
+pub use data_source::{HDbcWrapper, DataSource, Unconnected, Connected, AutocommitOff, AutocommitOn, AutocommitMode};
 pub use data_type::DataType;
 pub use diagnostics::{Diagnostics, DiagResult};
 pub use environment::Environment;
@@ -48,6 +48,7 @@ mod data_type;
 mod output_buffer;
 
 /// `Connection` can be used as a shorthand for a `DataSource` in `Connected` state.
-pub type Connection<'env> = DataSource<'env, Connected<'env>>;
+pub type Connection<'env, AC> = DataSource<'env, Connected<'env, AC>>;
+
 /// Shorthand for `Statements` in `Open` state.
 pub type ResultSet<'con, 'param, 'col, P> = Statement<'con, 'param, 'col, Open, P>;
