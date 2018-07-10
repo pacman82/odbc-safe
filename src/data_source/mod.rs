@@ -178,7 +178,7 @@ impl<'env, AC: AutocommitMode> Connection<'env, AC> {
 }
 
 impl<'env> Connection<'env, AutocommitOff> {
-    /// Set autocommit mode off, triggers implicit rollback of any running transaction
+    /// Set autocommit mode on, triggers implicit rollback of any running transaction
     pub fn enable_autocommit(mut self) -> Return<Connection<'env, AutocommitOn>, Self> {
         match self.handle.rollback() {
             Success(_) | Info(_) => {},
