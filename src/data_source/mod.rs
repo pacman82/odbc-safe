@@ -152,18 +152,11 @@ impl<'env, AC: AutocommitMode> Connection<'env, AC> {
     /// When an application has finished using a data source, it calls `disconnect`. `disconnect`
     /// disconnects the driver from the data source.
     ///
-    /// This will trigger implicit rollback if autocommit mode is off and current transaction was not committed nor rolled back.
-    ///
     /// * See [Disconnecting from a Data Source or Driver][1]
     /// * See [SQLDisconnect Function][2]
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/disconnecting-from-a-data-source-or-driver
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldisconnect-function
     pub fn disconnect(mut self) -> Return<DataSource<'env, Unconnected<'env>>, Connection<'env, AC>> {
-        match self.handle.rollback() {
-            Success(()) | Info(()) => (),
-            Error(()) => return Error(self.transit()),
-        };
-
         match self.handle.disconnect() {
             Success(()) => Success(self.transit()),
             Info(()) => Info(self.transit()),
@@ -178,13 +171,8 @@ impl<'env, AC: AutocommitMode> Connection<'env, AC> {
 }
 
 impl<'env> Connection<'env, AutocommitOff> {
-    /// Set autocommit mode on, triggers implicit rollback of any running transaction
+    /// Set autocommit mode on, per ODBC spec triggers implicit commit of any running transaction
     pub fn enable_autocommit(mut self) -> Return<Connection<'env, AutocommitOn>, Self> {
-        match self.handle.rollback() {
-            Success(_) | Info(_) => {},
-            Error(()) => return Error(self.transit()),
-        };
-
         match self.handle.set_autocommit(true) {
             Success(_) => Success(self.transit()),
             Info(_) => Info(self.transit()),

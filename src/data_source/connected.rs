@@ -27,13 +27,6 @@ pub struct Connected<'env, AC: AutocommitMode>(HDbc<'env>, PhantomData<AC>);
 
 impl<'env, AC: AutocommitMode> Drop for Connected<'env, AC> {
     fn drop(&mut self) {
-        match self.0.rollback() {
-            Success(()) | Info(()) => (),
-            Error(()) => if !panicking() {
-                panic!("SQLEndTran returned error")
-            },
-        };
-
         match self.0.disconnect() {
             Success(()) | Info(()) => (),
             Error(()) => if !panicking() {
