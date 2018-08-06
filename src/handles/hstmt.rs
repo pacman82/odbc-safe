@@ -75,6 +75,13 @@ impl<'env, 'param> HStmt<'env> {
         ret.map(|()| out)
     }
 
+    pub fn affected_row_count(&self) -> Return<SQLLEN> {
+        let mut out: SQLLEN = 0;
+        let ret = unsafe { SQLRowCount(self.handle, &mut out) };
+        let ret: Return<()> = ret.into();
+        ret.map(|()| out)
+    }
+
     pub fn fetch(&mut self) -> ReturnOption<()> {
         unsafe { SQLFetch(self.handle).into() }
     }

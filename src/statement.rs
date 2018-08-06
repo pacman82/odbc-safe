@@ -172,6 +172,12 @@ where
         self.handle.num_result_cols()
     }
 
+    /// Returns the number of rows affetced by INSERT, UPDATE, etc
+    ///
+    /// See [SQLRowCount][1]
+    /// [1]: https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlrowcount-function
+    pub fn affected_row_count(&self) -> Return<SQLLEN> { self.handle.affected_row_count() }
+
     /// Advances Cursor to next row
     ///
     /// See [SQLFetch][1]
