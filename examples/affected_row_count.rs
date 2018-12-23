@@ -12,7 +12,7 @@ fn main() {
     exec(&conn, "DELETE FROM movies WHERE title = 'TEST movie'");
 }
 
-fn exec(conn: &Connection, sql: &str) {
+fn exec(conn: &Connection<AutocommitOn>, sql: &str) {
     let stmt = Statement::with_parent(conn).unwrap();
     let rs = match stmt.exec_direct(sql) {
         ReturnOption::Success(s) |
