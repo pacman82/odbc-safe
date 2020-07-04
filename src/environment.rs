@@ -1,6 +1,7 @@
 use super::*;
 use sys::*;
 use std::marker::PhantomData;
+use version::VersionOption;
 
 /// An `Environment` is a global context, in which to access data.
 ///
@@ -14,21 +15,21 @@ use std::marker::PhantomData;
 /// See: [Environment Handles in the ODBC Reference][1]
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/environment-handles
 #[derive(Debug)]
-pub struct Environment<V> {
+pub struct Environment<V: VersionOption> {
     version: PhantomData<V>,
     /// Invariant: Should always point to a valid ODBC Environment with Version declared as V or
     /// `NoVersion`
     handle: HEnv,
 }
 
-impl<V> Environment<V> {
+impl<V: VersionOption> Environment<V> {
     /// Provides access to the raw ODBC environment handle.
     pub fn as_raw(&self) -> SQLHENV {
         self.handle.as_raw()
     }
 
     /// Express state transiton
-    fn transit<Other>(self) -> Environment<Other> {
+    fn transit<Other: VersionOption>(self) -> Environment<Other> {
         Environment {
             version: PhantomData,
             handle: self.handle,
@@ -138,7 +139,7 @@ impl Environment<NoVersion> {
     }
 }
 
-impl<V> Diagnostics for Environment<V> {
+impl<V: VersionOption> Diagnostics for Environment<V> {
     fn diagnostics(
         &self,
         rec_number: SQLSMALLINT,
