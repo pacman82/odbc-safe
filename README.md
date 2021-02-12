@@ -6,6 +6,8 @@ Odbc-safe
 [![MIT licensed](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/pacman82/odbc-safe/blob/master/LICENSE)
 [![Published](http://meritbadge.herokuapp.com/odbc-safe)](https://crates.io/crates/odbc-safe)
 
+Note: **This crate is no longer maintained**. Try using [odbc-api](https://github.com/pacman82/odbc-api).
+
 Introduction
 ------------
 
